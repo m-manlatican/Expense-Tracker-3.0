@@ -1,3 +1,4 @@
+import 'package:expense_tracker_3_0/pages/all_expenses_page.dart';
 import 'package:flutter/material.dart';
 
 class QuickActions extends StatelessWidget {
@@ -5,24 +6,31 @@ class QuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
+        const Text(
           'Quick Actions',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
         ),
-        Text(
+        TextButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AllExpensesPage()),
+            );
+          }, 
+          child: Text(
           'View All Expenses',
           style: TextStyle(
             fontSize: 12,
             color: Color(0xFF00B77B),
             fontWeight: FontWeight.w500,
           ),
-        ),
+        ),)
       ],
     );
   }

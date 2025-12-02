@@ -18,16 +18,16 @@ class AllExpensesListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      padding: const EdgeInsets.only(top: 8, bottom: 78),
       itemCount: expenses.length,
       itemBuilder: (context, index) {
         final expense = expenses[index];
         return ExpenseCard(
           expense: expense,
-          onEdit: () => onEdit(expense),
-          onDelete: () => onDelete(expense),
+          onEdit: () => onEdit(expense),      // use onEdit prop
+          onDelete: () => onDelete(expense),  // use onDelete prop
         );
       },
     );
   }
 }
+

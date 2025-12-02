@@ -2,7 +2,7 @@ import 'package:expense_tracker_3_0/cards/available_budget_card.dart';
 import 'package:expense_tracker_3_0/cards/quick_action_card.dart';
 import 'package:expense_tracker_3_0/cards/spending_overview_card.dart';
 import 'package:expense_tracker_3_0/cards/total_spent_card.dart';
-import 'package:expense_tracker_3_0/pages/add_expense_page.dart';
+import 'package:expense_tracker_3_0/widgets/add_expense_fab.dart';
 import 'package:expense_tracker_3_0/widgets/head_clipper.dart';
 import 'package:expense_tracker_3_0/widgets/header_title.dart';
 import 'package:expense_tracker_3_0/widgets/quick_action.dart';
@@ -54,18 +54,12 @@ class DashboardPage extends StatelessWidget {
             ),
             // Floating "+" button at bottom right
             Positioned(
-              bottom: 24,
-              right: 24,
-              child: FloatingActionButton(
-                backgroundColor: const Color(0xFF00C665),
-                elevation: 4,
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => AddExpensePage()),
-                  );
-                },
-                child: const Icon(Icons.add, size: 30),
+              bottom: 15,
+              right: 15,
+              child: const AddExpenseFab(
+                backgroundColor: Color(0xFF00C665),
+                iconSize: 30,
+                // no onExpenseCreated here – this page just opens AddExpensePage
               ),
             ),
           ],

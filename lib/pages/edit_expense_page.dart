@@ -1,23 +1,38 @@
-import 'package:expense_tracker_3_0/pages/dashboard_page.dart';
+import 'package:expense_tracker_3_0/models/all_expense_model.dart';
+import 'package:expense_tracker_3_0/widgets/form_fields.dart';
 import 'package:flutter/material.dart';
 
-class AddExpensePage extends StatefulWidget {
-  const AddExpensePage({super.key});
+class EditExpensePage extends StatefulWidget {
+  final Expense expense; // the expense to edit
+
+  const EditExpensePage({super.key, required this.expense});
 
   @override
-  State<AddExpensePage> createState() => _AddExpensePageState();
+  State<EditExpensePage> createState() => _EditExpensePageState();
 }
 
-class _AddExpensePageState extends State<AddExpensePage> {
-  final nameController = TextEditingController();
-  final amountController = TextEditingController();
-  final notesController = TextEditingController();
+class _EditExpensePageState extends State<EditExpensePage> {
+  late TextEditingController nameController;
+  late TextEditingController amountController;
+  late TextEditingController notesController;
 
-  String category = "Supplies"; // default
-  String dateLabel = "01/12/2025";
+  late String category;
+  late String dateLabel;
 
-  void saveExpense() {
-    final expenseData = {
+  @override
+  void initState() {
+    super.initState();
+    nameController = TextEditingController(text: widget.expense.title);
+    amountController =
+        TextEditingController(text: widget.expense.amount.toString());
+    notesController = TextEditingController(text: widget.expense.notes);
+    category = widget.expense.category;
+    dateLabel = widget.expense.dateLabel;
+  }
+
+  void updateExpense() {
+    final updatedData = {
+      "id": widget.expense.id, // keep the same id
       "title": nameController.text.trim(),
       "amount": double.tryParse(amountController.text) ?? 0.0,
       "category": category,
@@ -25,7 +40,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
       "notes": notesController.text.trim(),
     };
 
-    Navigator.pop(context, expenseData);
+    Navigator.pop(context, updatedData);
   }
 
   @override
@@ -39,12 +54,12 @@ class _AddExpensePageState extends State<AddExpensePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F5F9), // flat dashboard bg
+      backgroundColor: const Color(0xFFF3F5F9),
       appBar: AppBar(
         backgroundColor: const Color(0xFF009846),
         elevation: 0,
         title: const Text(
-          'Add Expense',
+          'Edit Expense',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w600,
@@ -54,36 +69,23 @@ class _AddExpensePageState extends State<AddExpensePage> {
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.white),
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const DashboardPage(),
-                ),
-              );
-            },
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _Label('Expense Name'),
+            const FormLabel('Expense Name'),
             const SizedBox(height: 6),
-            _RoundedField(
+            RoundedTextField(
               controller: nameController,
               hintText: 'e.g. Office Supplies',
             ),
             const SizedBox(height: 16),
 
-            const _Label('Amount'),
+            const FormLabel('Amount'),
             const SizedBox(height: 6),
-            _RoundedField(
+            RoundedTextField(
               controller: amountController,
               prefix: const Text(
                 '\$',
@@ -96,7 +98,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
             ),
             const SizedBox(height: 16),
 
-            const _Label('Category'),
+            const FormLabel('Category'),
             const SizedBox(height: 6),
             GestureDetector(
               onTap: () async {
@@ -129,7 +131,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
                   setState(() => category = selected);
                 }
               },
-              child: _RoundedField(
+              child: RoundedTextField(
                 controller: TextEditingController(text: category),
                 hintText: category,
                 suffixIcon:
@@ -139,7 +141,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
             ),
             const SizedBox(height: 16),
 
-            const _Label('Date'),
+            const FormLabel('Date'),
             const SizedBox(height: 6),
             GestureDetector(
               onTap: () async {
@@ -156,7 +158,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
                   });
                 }
               },
-              child: _RoundedField(
+              child: RoundedTextField(
                 controller: TextEditingController(text: dateLabel),
                 hintText: dateLabel,
                 suffixIcon: const Icon(Icons.calendar_today_rounded,
@@ -166,9 +168,9 @@ class _AddExpensePageState extends State<AddExpensePage> {
             ),
             const SizedBox(height: 16),
 
-            const _Label('Notes (Optional)'),
+            const FormLabel('Notes (Optional)'),
             const SizedBox(height: 6),
-            _RoundedField(
+            RoundedTextField(
               controller: notesController,
               hintText: 'Add any additional details...',
               maxLines: 3,
@@ -178,9 +180,9 @@ class _AddExpensePageState extends State<AddExpensePage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: saveExpense,
+                onPressed: updateExpense,
                 icon: const Icon(Icons.save, color: Colors.white),
-                label: const Text("Save Expense"),
+                label: const Text("Update Expense"),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00A54C),
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -191,84 +193,6 @@ class _AddExpensePageState extends State<AddExpensePage> {
               ),
             )
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Label extends StatelessWidget {
-  final String text;
-  const _Label(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: Color(0xFF555555),
-      ),
-    );
-  }
-}
-
-class _RoundedField extends StatelessWidget {
-  final String? hintText;
-  final Widget? prefix;
-  final Widget? suffixIcon;
-  final TextInputType? keyboardType;
-  final bool readOnly;
-  final int maxLines;
-  final TextEditingController? controller;
-
-  const _RoundedField({
-    this.hintText,
-    this.prefix,
-    this.suffixIcon,
-    this.keyboardType,
-    this.readOnly = false,
-    this.maxLines = 1,
-    this.controller,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      readOnly: readOnly,
-      keyboardType: keyboardType,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.white,
-        hintText: hintText,
-        prefixIcon: prefix == null
-            ? null
-            : Padding(
-                padding: const EdgeInsets.only(left: 14, right: 8),
-                child: prefix,
-              ),
-        prefixIconConstraints:
-            const BoxConstraints(minWidth: 0, minHeight: 0),
-        suffixIcon: suffixIcon,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide:
-              BorderSide(color: Colors.grey.shade300, width: 1),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide:
-              BorderSide(color: Colors.grey.shade300, width: 1),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide:
-              const BorderSide(color: Color(0xFF00A54C), width: 1.2),
         ),
       ),
     );

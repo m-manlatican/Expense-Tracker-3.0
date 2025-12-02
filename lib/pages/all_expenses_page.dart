@@ -1,7 +1,8 @@
 import 'package:expense_tracker_3_0/cards/all_expenses_listview.dart';
 import 'package:expense_tracker_3_0/models/all_expense_model.dart';
-import 'package:expense_tracker_3_0/pages/add_expense_page.dart';
 import 'package:expense_tracker_3_0/pages/dashboard_page.dart';
+import 'package:expense_tracker_3_0/pages/edit_expense_page.dart';
+import 'package:expense_tracker_3_0/widgets/add_expense_fab.dart';
 import 'package:flutter/material.dart';
 
 class AllExpensesPage extends StatefulWidget {
@@ -16,10 +17,36 @@ class AllExpensesPageState extends State<AllExpensesPage> {
   // start with some sample expenses
   final List<Expense> _expenses = [];
 
-  void _editExpense(Expense expense) {
-    // implement edit if needed
+  void _editExpense(Expense expense) async {
+    final updated = await Navigator.push<Map<String, dynamic>?>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditExpensePage(expense: expense),
+      ),
+    );
+
+    if (updated != null) {
+      setState(() {
+        final index = _expenses.indexWhere((e) => e.id == updated['id']);
+        if (index != -1) {
+          _expenses[index] = Expense(
+            id: updated['id'],
+            title: updated['title'] ?? 'Untitled',
+            category: updated['category'] ?? 'Other',
+            amount: (updated['amount'] is double)
+                ? updated['amount']
+                : double.tryParse('${updated['amount']}') ?? 0.0,
+            dateLabel: updated['dateLabel'] ?? '',
+            notes: updated['notes'] ?? '',
+            icon: _expenses[index].icon,
+            iconColor: _expenses[index].iconColor,
+          );
+        }
+      });
+    }
   }
 
+  // 2) Your delete function
   void _deleteExpense(Expense expense) {
     setState(() {
       _expenses.removeWhere((e) => e.id == expense.id);
@@ -31,7 +58,7 @@ class AllExpensesPageState extends State<AllExpensesPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF009846),
+        backgroundColor: const Color(0xFF0AA06E),
         elevation: 0,
         title: const Text(
           'All Expenses',
@@ -64,35 +91,13 @@ class AllExpensesPageState extends State<AllExpensesPage> {
           onDelete: _deleteExpense,
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF00A54C),
-        child: const Icon(Icons.add, color: Colors.white),
-        onPressed: () async {
-          // open AddExpensePage and wait for returned data
-          final data = await Navigator.push<Map<String, dynamic>?>(
-            context,
-            MaterialPageRoute(builder: (context) => const AddExpensePage()),
-          );
-
-          // if user saved, data is a map with fields we expect
-          if (data != null) {
-            setState(() {
-              _expenses.add(
-                Expense(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                  title: data["title"] ?? 'Untitled',
-                  category: data["category"] ?? 'Other',
-                  amount: (data["amount"] is double)
-                      ? data["amount"]
-                      : double.tryParse('${data["amount"]}') ?? 0.0,
-                  dateLabel: data["dateLabel"] ?? '',
-                  notes: data["notes"] ?? '',
-                  icon: Icons.receipt_long,
-                  iconColor: const Color(0xFF30D177),
-                ),
-              );
-            });
-          }
+      floatingActionButton: AddExpenseFab(
+        backgroundColor: const Color(0xFF00C665),
+        iconSize: 30,
+        onExpenseCreated: (expense) {
+          setState(() {
+            _expenses.add(expense);
+          });
         },
       ),
     );

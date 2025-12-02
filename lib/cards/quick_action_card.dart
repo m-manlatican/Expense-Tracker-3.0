@@ -7,26 +7,29 @@ class QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return WhiteCard(
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8FFF6),
-              borderRadius: BorderRadius.circular(10),
+    return TextButton(
+      onPressed: (){
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => AllExpensesPage()),
+        );
+      }, 
+      child: WhiteCard(
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8FFF6),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.format_list_bulleted_sharp,color: Colors.green,size: 20,),
             ),
-            child: Icon(Icons.format_list_bulleted_sharp,color: Colors.green,size: 20,),
-          ),
-          SizedBox(width: 20),
-          TextButton(onPressed: (){
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => AllExpensesPage()),
-            );
-          }, child: Text('View All Expenses'))
-        ],
+            SizedBox(width: 20),
+            Text('View All Expenses', style: TextStyle(color: Colors.black),)
+          ],
+        )
       )
     );
   }
