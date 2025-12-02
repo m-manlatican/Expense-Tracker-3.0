@@ -1,6 +1,7 @@
 import 'package:expense_tracker_3_0/models/all_expense_model.dart';
 import 'package:expense_tracker_3_0/pages/add_expense_page.dart';
 import 'package:flutter/material.dart';
+import '../firestore_functions.dart'; // import Firestore functions
 
 typedef ExpenseCallback = void Function(Expense expense);
 
@@ -24,14 +25,14 @@ class AddExpenseFab extends StatelessWidget {
       backgroundColor: backgroundColor,
       child: Icon(icon, color: Colors.white, size: iconSize),
       onPressed: () async {
-        // always open the same AddExpensePage
+        // Open AddExpensePage
         final data = await Navigator.push<Map<String, dynamic>?>(
           context,
           MaterialPageRoute(builder: (context) => const AddExpensePage()),
         );
 
-        // If this page cares about the created expense, convert and return it
-        if (data != null && onExpenseCreated != null) {
+        if (data != null) {
+          // Create Firestore-ready Expense object
           final expense = Expense(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             title: data["title"] ?? 'Untitled',
@@ -41,10 +42,17 @@ class AddExpenseFab extends StatelessWidget {
                 : double.tryParse('${data["amount"]}') ?? 0.0,
             dateLabel: data["dateLabel"] ?? '',
             notes: data["notes"] ?? '',
-            icon: Icons.receipt_long,
-            iconColor: const Color(0xFF30D177),
+            iconCodePoint: Icons.receipt_long.codePoint,
+            iconColorValue: const Color(0xFF30D177).value,
           );
-          onExpenseCreated!(expense);
+
+          // Save to Firestore
+          await addExpense(expense);
+
+          // Optionally call the callback
+          if (onExpenseCreated != null) {
+            onExpenseCreated!(expense);
+          }
         }
       },
     );

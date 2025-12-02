@@ -1,4 +1,5 @@
-import 'package:expense_tracker_3_0/pages/dashboard_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class AddExpensePage extends StatefulWidget {
@@ -9,266 +10,168 @@ class AddExpensePage extends StatefulWidget {
 }
 
 class _AddExpensePageState extends State<AddExpensePage> {
-  final nameController = TextEditingController();
-  final amountController = TextEditingController();
-  final notesController = TextEditingController();
+  final TextEditingController titleController = TextEditingController();
+  final TextEditingController amountController = TextEditingController();
+  final TextEditingController notesController = TextEditingController();
 
-  String category = "Supplies"; // default
-  String dateLabel = "01/12/2025";
+  String selectedCategory = 'Food';
+  bool isLoading = false;
+  
+  // Categories list
+  final List<String> categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Other'];
 
-  void saveExpense() {
-    final expenseData = {
-      "title": nameController.text.trim(),
-      "amount": double.tryParse(amountController.text) ?? 0.0,
-      "category": category,
-      "dateLabel": dateLabel,
-      "notes": notesController.text.trim(),
-    };
+  Future<void> _saveExpense() async {
+  final title = titleController.text.trim();
+  final amountText = amountController.text.trim();
+  final userId = FirebaseAuth.instance.currentUser?.uid;
 
-    Navigator.pop(context, expenseData);
+  if (title.isEmpty || amountText.isEmpty || userId == null) {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill required fields and ensure you are logged in.')));
+    return;
   }
 
-  @override
-  void dispose() {
-    nameController.dispose();
-    amountController.dispose();
-    notesController.dispose();
-    super.dispose();
+  try {
+    setState(() => isLoading = true);
+
+    final double amount = double.parse(amountText);
+
+    // --- CRITICAL SAVING PATH ---
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('expenses')
+        .add({
+      'title': title,
+      'amount': amount,
+      'category': selectedCategory,
+      'notes': notesController.text.trim(),
+      'date': Timestamp.now(), // Use Timestamp for correct sorting
+      'dateLabel': "${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}",
+      'iconCodePoint': Icons.fastfood.codePoint, 
+      'iconColorValue': Colors.blue.value,
+    });
+
+    if (!mounted) return;
+    Navigator.pop(context); // Go back to Dashboard after saving
+    
+  } on FirebaseException catch (e) {
+    // 🔥 New: Log the specific Firebase error code and message
+    debugPrint('Firebase Save Error Code: ${e.code}');
+    debugPrint('Firebase Save Error Message: ${e.message}');
+    
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Save failed: ${e.message} (Code: ${e.code})'),
+            backgroundColor: Colors.red,
+        )
+    );
+  } catch (e) {
+    // Handle generic errors (like parsing amount)
+    debugPrint('General Save Error: $e');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('General Error: $e'),
+            backgroundColor: Colors.red,
+        )
+    );
+  } finally {
+    if (mounted) setState(() => isLoading = false);
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F5F9), // flat dashboard bg
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF009846),
-        elevation: 0,
-        title: const Text(
-          'Add Expense',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.white),
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const DashboardPage(),
-                ),
-              );
-            },
-          ),
-        ],
+        title: const Text("Add Expense"),
+        backgroundColor: const Color(0xFF0AA06E),
+        foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _Label('Expense Name'),
-            const SizedBox(height: 6),
-            _RoundedField(
-              controller: nameController,
-              hintText: 'e.g. Office Supplies',
-            ),
-            const SizedBox(height: 16),
-
-            const _Label('Amount'),
-            const SizedBox(height: 6),
-            _RoundedField(
+            const Text("Amount", style: TextStyle(fontWeight: FontWeight.bold)),
+            TextField(
               controller: amountController,
-              prefix: const Text(
-                '\$',
-                style: TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 16),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                hintText: "0.00",
+                prefixIcon: Icon(Icons.attach_money),
+                border: OutlineInputBorder(),
               ),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              hintText: '0.00',
             ),
             const SizedBox(height: 16),
-
-            const _Label('Category'),
-            const SizedBox(height: 6),
-            GestureDetector(
-              onTap: () async {
-                final selected = await showDialog<String>(
-                  context: context,
-                  builder: (ctx) => SimpleDialog(
-                    title: const Text('Select category'),
-                    children: [
-                      SimpleDialogOption(
-                        onPressed: () => Navigator.pop(ctx, 'Supplies'),
-                        child: const Text('Supplies'),
-                      ),
-                      SimpleDialogOption(
-                        onPressed: () => Navigator.pop(ctx, 'Meals'),
-                        child: const Text('Meals'),
-                      ),
-                      SimpleDialogOption(
-                        onPressed: () => Navigator.pop(ctx, 'Travel'),
-                        child: const Text('Travel'),
-                      ),
-                      SimpleDialogOption(
-                        onPressed: () => Navigator.pop(ctx, 'Software'),
-                        child: const Text('Software'),
-                      ),
-                    ],
-                  ),
-                );
-
-                if (selected != null) {
-                  setState(() => category = selected);
-                }
-              },
-              child: _RoundedField(
-                controller: TextEditingController(text: category),
-                hintText: category,
-                suffixIcon:
-                    const Icon(Icons.keyboard_arrow_down_rounded),
-                readOnly: true,
+            
+            const Text("Title", style: TextStyle(fontWeight: FontWeight.bold)),
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
+                hintText: "e.g. Lunch at Mcdonalds",
+                prefixIcon: Icon(Icons.title),
+                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
 
-            const _Label('Date'),
-            const SizedBox(height: 6),
-            GestureDetector(
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: DateTime.now(),
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime(2100),
-                );
-                if (picked != null) {
-                  setState(() {
-                    dateLabel =
-                        '${picked.month.toString().padLeft(2, '0')}/${picked.day.toString().padLeft(2, '0')}/${picked.year}';
-                  });
-                }
-              },
-              child: _RoundedField(
-                controller: TextEditingController(text: dateLabel),
-                hintText: dateLabel,
-                suffixIcon: const Icon(Icons.calendar_today_rounded,
-                    size: 18),
-                readOnly: true,
+            const Text("Category", style: TextStyle(fontWeight: FontWeight.bold)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: selectedCategory,
+                  isExpanded: true,
+                  items: categories.map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  onChanged: (newValue) {
+                    setState(() {
+                      selectedCategory = newValue!;
+                    });
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 16),
 
-            const _Label('Notes (Optional)'),
-            const SizedBox(height: 6),
-            _RoundedField(
+            const Text("Notes (Optional)", style: TextStyle(fontWeight: FontWeight.bold)),
+            TextField(
               controller: notesController,
-              hintText: 'Add any additional details...',
               maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: "Additional details...",
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 24),
 
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: saveExpense,
-                icon: const Icon(Icons.save, color: Colors.white),
-                label: const Text("Save Expense"),
+              child: ElevatedButton(
+                onPressed: isLoading ? null : _saveExpense,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00A54C),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  backgroundColor: const Color(0xFF0AA06E),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
+                child: isLoading 
+                  ? const CircularProgressIndicator(color: Colors.white) 
+                  : const Text("Save Expense"),
               ),
-            )
+            ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Label extends StatelessWidget {
-  final String text;
-  const _Label(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: Color(0xFF555555),
-      ),
-    );
-  }
-}
-
-class _RoundedField extends StatelessWidget {
-  final String? hintText;
-  final Widget? prefix;
-  final Widget? suffixIcon;
-  final TextInputType? keyboardType;
-  final bool readOnly;
-  final int maxLines;
-  final TextEditingController? controller;
-
-  const _RoundedField({
-    this.hintText,
-    this.prefix,
-    this.suffixIcon,
-    this.keyboardType,
-    this.readOnly = false,
-    this.maxLines = 1,
-    this.controller,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      readOnly: readOnly,
-      keyboardType: keyboardType,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.white,
-        hintText: hintText,
-        prefixIcon: prefix == null
-            ? null
-            : Padding(
-                padding: const EdgeInsets.only(left: 14, right: 8),
-                child: prefix,
-              ),
-        prefixIconConstraints:
-            const BoxConstraints(minWidth: 0, minHeight: 0),
-        suffixIcon: suffixIcon,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide:
-              BorderSide(color: Colors.grey.shade300, width: 1),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide:
-              BorderSide(color: Colors.grey.shade300, width: 1),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide:
-              const BorderSide(color: Color(0xFF00A54C), width: 1.2),
         ),
       ),
     );
