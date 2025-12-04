@@ -3,12 +3,20 @@ import 'package:expense_tracker_3_0/widgets/line_chart_painter.dart';
 import 'package:flutter/material.dart';
 
 class SpendingOverviewCard extends StatelessWidget {
-  const SpendingOverviewCard({super.key});
+  // 1. Accept dynamic data
+  final List<double> spendingPoints;
+  final List<String> dateLabels;
+
+  const SpendingOverviewCard({
+    super.key,
+    required this.spendingPoints,
+    required this.dateLabels,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // Simple fake data points for the mini line chart
-    const points = [450.0, 200.0, 80.0, 90.0, 140.0, 220.0];
+    // Safety check: if empty, show a flat line
+    final points = spendingPoints.isEmpty ? [0.0, 0.0] : spendingPoints;
 
     return WhiteCard(
       child: Column(
@@ -22,6 +30,7 @@ class SpendingOverviewCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          // 2. Pass real points to the painter
           SizedBox(
             height: 140,
             child: CustomPaint(
@@ -30,16 +39,13 @@ class SpendingOverviewCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const Row(
+          // 3. Generate date labels dynamically
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('11/20', style: TextStyle(fontSize: 10, color: Colors.black45)),
-              Text('11/23', style: TextStyle(fontSize: 10, color: Colors.black45)),
-              Text('11/25', style: TextStyle(fontSize: 10, color: Colors.black45)),
-              Text('11/26', style: TextStyle(fontSize: 10, color: Colors.black45)),
-              Text('11/27', style: TextStyle(fontSize: 10, color: Colors.black45)),
-              Text('11/28', style: TextStyle(fontSize: 10, color: Colors.black45)),
-            ],
+            children: dateLabels.map((label) => Text(
+              label,
+              style: const TextStyle(fontSize: 10, color: Colors.black45),
+            )).toList(),
           ),
         ],
       ),

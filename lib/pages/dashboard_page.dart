@@ -5,6 +5,8 @@ import 'package:expense_tracker_3_0/cards/total_budget_card.dart';
 import 'package:expense_tracker_3_0/pages/all_expenses_page.dart'; 
 import 'package:expense_tracker_3_0/widgets/head_clipper.dart';
 import 'package:expense_tracker_3_0/widgets/header_title.dart';
+import 'package:expense_tracker_3_0/firestore_functions.dart'; 
+import 'package:expense_tracker_3_0/models/all_expense_model.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -20,28 +22,73 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   int _selectedIndex = 0; 
   double _totalBudget = 5000.00; 
-  final double _totalSpent = 2000.00;
-
+  late Stream<List<Expense>> _expensesStream;
   List<Widget> _widgetOptions = []; 
 
   @override
   void initState() {
     super.initState();
+    _expensesStream = getExpenses();
     _rebuildWidgets();
+  }
+
+  // --- HELPER: Process expenses into Chart Data (Last 7 Days) ---
+  Map<String, dynamic> _getChartData(List<Expense> expenses) {
+    List<double> values = [];
+    List<String> dates = [];
+    DateTime now = DateTime.now();
+    
+    // Loop back 6 days + today = 7 days
+    for (int i = 6; i >= 0; i--) {
+      DateTime target = now.subtract(Duration(days: i));
+      
+      // Sum expenses that match this specific day
+      double dailySum = expenses.where((e) {
+        DateTime eDate = e.date.toDate();
+        return eDate.year == target.year && 
+               eDate.month == target.month && 
+               eDate.day == target.day;
+      }).fold(0.0, (sum, item) => sum + item.amount);
+
+      values.add(dailySum);
+      dates.add("${target.month}/${target.day}");
+    }
+
+    return {'values': values, 'dates': dates};
   }
 
   void _rebuildWidgets() {
     _widgetOptions = <Widget>[
-      _DashboardContent(
-        onViewAllExpenses: _goToExpensesTab,
-        totalBudget: _totalBudget,
-        totalSpent: _totalSpent,
-        onBudgetChanged: _updateBudget,
+      StreamBuilder<List<Expense>>(
+        stream: _expensesStream,
+        builder: (context, snapshot) {
+          double totalSpent = 0.0;
+          List<double> chartValues = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+          List<String> chartDates = ['-', '-', '-', '-', '-', '-', '-'];
+
+          if (snapshot.hasData) {
+            final expenses = snapshot.data!;
+            // 1. Calculate Total Spent
+            totalSpent = expenses.fold(0.0, (sum, item) => sum + item.amount);
+            
+            // 2. Calculate Chart Data
+            final chartData = _getChartData(expenses);
+            chartValues = chartData['values'];
+            chartDates = chartData['dates'];
+          }
+
+          return _DashboardContent(
+            onViewAllExpenses: _goToExpensesTab,
+            totalBudget: _totalBudget,
+            totalSpent: totalSpent,
+            chartValues: chartValues, // Pass data
+            chartDates: chartDates,   // Pass dates
+            onBudgetChanged: _updateBudget,
+          );
+        },
       ),
-      // 3. Pass the callback here!
-      // When back is pressed, it triggers _onItemTapped(0) -> switches to Home
       AllExpensesPage(
-        onBackTap: () => _onItemTapped(0), 
+        onBackTap: () => _onItemTapped(0),
       ),
       const Center(child: Text('Reports Page Content', style: TextStyle(fontSize: 24, color: _primaryGreen))),
     ];
@@ -73,7 +120,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return Scaffold(
       body: _widgetOptions.elementAt(_selectedIndex), 
-
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -101,7 +147,6 @@ class _DashboardPageState extends State<DashboardPage> {
         showUnselectedLabels: true,
         elevation: 10,
       ),
-      
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF00C665),
         heroTag: 'add_expense_btn', 
@@ -119,12 +164,17 @@ class _DashboardContent extends StatelessWidget {
   final VoidCallback onViewAllExpenses; 
   final double totalBudget;
   final double totalSpent;
+  // Added new parameters for the chart
+  final List<double> chartValues;
+  final List<String> chartDates;
   final Function(double) onBudgetChanged;
 
   const _DashboardContent({
     required this.onViewAllExpenses,
     required this.totalBudget,
     required this.totalSpent,
+    required this.chartValues,
+    required this.chartDates,
     required this.onBudgetChanged,
   });
 
@@ -134,7 +184,6 @@ class _DashboardContent extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    // (Content remains exactly the same as before)
     final double availableBalance = totalBudget - totalSpent;
 
     return SafeArea(
@@ -180,7 +229,11 @@ class _DashboardContent extends StatelessWidget {
                 ),
                 
                 const SizedBox(height: 16),
-                const SpendingOverviewCard(),
+                // Pass the real calculated data
+                SpendingOverviewCard(
+                  spendingPoints: chartValues,
+                  dateLabels: chartDates,
+                ),
               ],
             ),
           ),

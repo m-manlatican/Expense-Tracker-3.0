@@ -20,6 +20,10 @@ class _EditExpensePageState extends State<EditExpensePage> {
 
   late String category;
 
+  // UNIFIED THEME COLORS
+  final Color primaryGreen = const Color(0xFF0AA06E);
+  final Color scaffoldBg = const Color(0xFFF3F5F9);
+
   @override
   void initState() {
     super.initState();
@@ -30,7 +34,6 @@ class _EditExpensePageState extends State<EditExpensePage> {
     category = widget.expense.category;
   }
 
-  // 🔥 Same helper logic to keep icons consistent
   Map<String, dynamic> _getCategoryDetails(String category) {
     switch (category) {
       case 'Food':
@@ -59,7 +62,6 @@ class _EditExpensePageState extends State<EditExpensePage> {
     final now = DateTime.now(); 
     final newDateLabel = "${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}/${now.year}";
     
-    // 🔥 Get updated icon/color based on the (potentially new) category
     final categoryDetails = _getCategoryDetails(category);
 
     final updatedExpense = Expense(
@@ -70,8 +72,6 @@ class _EditExpensePageState extends State<EditExpensePage> {
       dateLabel: newDateLabel,
       date: Timestamp.fromDate(now),
       notes: notesController.text.trim(),
-      
-      // 🔥 FIX: Update icon based on the new category
       iconCodePoint: (categoryDetails['icon'] as IconData).codePoint,
       iconColorValue: (categoryDetails['color'] as Color).value, 
     );
@@ -100,9 +100,10 @@ class _EditExpensePageState extends State<EditExpensePage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F5F9),
+      backgroundColor: scaffoldBg, // Unified Background
       appBar: AppBar(
-        backgroundColor: const Color(0xFF009846),
+        // LOCATION 1: The AppBar Color
+        backgroundColor: primaryGreen, // Unified Green
         elevation: 0,
         title: const Text(
           'Edit Expense',
@@ -143,7 +144,7 @@ class _EditExpensePageState extends State<EditExpensePage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12), 
+                borderRadius: BorderRadius.circular(14), // Updated to match Add Page
                 border: Border.all(color: Colors.transparent), 
               ),
               child: DropdownButtonHideUnderline(
@@ -151,6 +152,7 @@ class _EditExpensePageState extends State<EditExpensePage> {
                   value: category,
                   isExpanded: true,
                   icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                  borderRadius: BorderRadius.circular(14),
                   items: categories.map((String value) {
                     return DropdownMenuItem<String>(
                       value: value,
@@ -177,11 +179,12 @@ class _EditExpensePageState extends State<EditExpensePage> {
               child: ElevatedButton.icon(
                 onPressed: _handleUpdateExpense,
                 icon: const Icon(Icons.save, color: Colors.white),
-                label: const Text("Update Expense", style: TextStyle(color: Colors.white),),
+                label: const Text("Update Expense", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00A54C),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  // LOCATION 2: The Button Color
+                  backgroundColor: primaryGreen, // Unified Green
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), // Updated radius
                 ),
               ),
             )

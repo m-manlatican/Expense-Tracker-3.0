@@ -1,6 +1,6 @@
+import 'package:expense_tracker_3_0/pages/register_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// Removed unused import: register_page.dart
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -14,8 +14,11 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController passwordController = TextEditingController();
   bool isLoading = false;
 
+  // UNIFIED THEME COLORS
+  final Color primaryGreen = const Color(0xFF0AA06E);
+  final Color scaffoldBg = const Color(0xFFF3F5F9);
+
   Future<void> _login() async {
-    // ... (Existing login logic remains unchanged) ...
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
@@ -43,7 +46,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFE7FFF2),
+      backgroundColor: scaffoldBg, // Unified Background
       appBar: AppBar(
         backgroundColor: Colors.transparent, 
         elevation: 0,
@@ -53,9 +56,10 @@ class _LoginPageState extends State<LoginPage> {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
         child: Column(
           children: [
-            const Icon(Icons.heat_pump_rounded,size: 50,),
+            Icon(Icons.heat_pump_rounded, size: 50, color: primaryGreen), // Unified Icon Color
+            const SizedBox(height: 10),
             const Text(
-              "Welcome",
+              "Welcome Back",
               style: TextStyle(
                 fontSize: 28, 
                 fontWeight: FontWeight.bold,
@@ -66,14 +70,14 @@ class _LoginPageState extends State<LoginPage> {
             
             TextField(
               controller: emailController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: "Email",
-                // ... (rest of styling) ...
-                labelStyle: TextStyle(color: Colors.black54),
-                prefixIcon: Icon(Icons.email, color: Colors.black54),
-                border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.black38)),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.black38)),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00A86B), width: 2)),
+                labelStyle: const TextStyle(color: Colors.black54),
+                prefixIcon: const Icon(Icons.email, color: Colors.black54),
+                // Using standard borders but with Theme Green focus
+                border: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.black38)),
+                enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.black38)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryGreen, width: 2)),
               ),
             ),
             const SizedBox(height: 20),
@@ -81,14 +85,13 @@ class _LoginPageState extends State<LoginPage> {
             TextField(
               controller: passwordController,
               obscureText: true,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: "Password",
-                // ... (rest of styling) ...
-                labelStyle: TextStyle(color: Colors.black54),
-                prefixIcon: Icon(Icons.lock, color: Colors.black54),
-                border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.black38)),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.black38)),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00A86B), width: 2)),
+                labelStyle: const TextStyle(color: Colors.black54),
+                prefixIcon: const Icon(Icons.lock, color: Colors.black54),
+                border: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.black38)),
+                enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.black38)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryGreen, width: 2)),
               ),
             ),
             const SizedBox(height: 40),
@@ -98,11 +101,11 @@ class _LoginPageState extends State<LoginPage> {
               child: ElevatedButton(
                 onPressed: isLoading ? null : _login,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00A86B), 
+                  backgroundColor: primaryGreen, // Unified Button Color
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: const StadiumBorder(),
-                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 2,
                 ),
                 child: isLoading 
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
@@ -113,12 +116,11 @@ class _LoginPageState extends State<LoginPage> {
             
             TextButton(
               onPressed: () {
-                // Use named route for register
-                Navigator.pushNamed(context, '/register');
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPage()));
               },
-              child: const Text(
+              child: Text(
                 "Don't have an account? Register",
-                style: TextStyle(color: Color(0xFF6A5ACD)),
+                style: TextStyle(color: primaryGreen, fontWeight: FontWeight.w600), // Unified Text Link
               ),
             ),
           ],

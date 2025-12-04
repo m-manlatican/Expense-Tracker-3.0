@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:expense_tracker_3_0/widgets/form_fields.dart'; // Ensure this import exists
 
 class AddExpensePage extends StatefulWidget {
   const AddExpensePage({super.key});
@@ -17,26 +18,17 @@ class _AddExpensePageState extends State<AddExpensePage> {
   String selectedCategory = 'Food';
   bool isLoading = false;
   
-  // Categories list
   final List<String> categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Other'];
 
-  // 🔥 HELPER: Returns the Icon and Color based on the category name
   Map<String, dynamic> _getCategoryDetails(String category) {
     switch (category) {
-      case 'Food':
-        return {'icon': Icons.fastfood, 'color': const Color(0xFFFF9F0A)}; // Orange
-      case 'Transport':
-        return {'icon': Icons.directions_car, 'color': const Color(0xFF0A84FF)}; // Blue
-      case 'Shopping':
-        return {'icon': Icons.shopping_bag, 'color': const Color(0xFFBF5AF2)}; // Purple
-      case 'Bills':
-        return {'icon': Icons.receipt_long, 'color': const Color(0xFFFF375F)}; // Red
-      case 'Entertainment':
-        return {'icon': Icons.movie, 'color': const Color(0xFF5E5CE6)}; // Indigo
-      case 'Health':
-        return {'icon': Icons.medical_services, 'color': const Color(0xFF32D74B)}; // Green
-      default:
-        return {'icon': Icons.grid_view, 'color': const Color(0xFF8E8E93)}; // Grey
+      case 'Food': return {'icon': Icons.fastfood, 'color': const Color(0xFFFF9F0A)}; 
+      case 'Transport': return {'icon': Icons.directions_car, 'color': const Color(0xFF0A84FF)}; 
+      case 'Shopping': return {'icon': Icons.shopping_bag, 'color': const Color(0xFFBF5AF2)}; 
+      case 'Bills': return {'icon': Icons.receipt_long, 'color': const Color(0xFFFF375F)}; 
+      case 'Entertainment': return {'icon': Icons.movie, 'color': const Color(0xFF5E5CE6)}; 
+      case 'Health': return {'icon': Icons.medical_services, 'color': const Color(0xFF32D74B)}; 
+      default: return {'icon': Icons.grid_view, 'color': const Color(0xFF8E8E93)}; 
     }
   }
 
@@ -46,7 +38,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
     final userId = FirebaseAuth.instance.currentUser?.uid;
 
     if (title.isEmpty || amountText.isEmpty || userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill required fields and ensure you are logged in.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill required fields.')));
       return;
     }
 
@@ -55,13 +47,8 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
       final double amount = double.parse(amountText);
       final now = DateTime.now(); 
-
-      // 🔥 Get the dynamic icon and color
       final categoryDetails = _getCategoryDetails(selectedCategory);
-      final IconData icon = categoryDetails['icon'];
-      final Color color = categoryDetails['color'];
 
-      // --- CRITICAL SAVING PATH ---
       await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
@@ -73,35 +60,16 @@ class _AddExpensePageState extends State<AddExpensePage> {
         'notes': notesController.text.trim(),
         'date': Timestamp.now(), 
         'dateLabel': "${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}/${now.year}",
-        
-        // 🔥 FIX: Use the dynamic values instead of hardcoded ones
-        'iconCodePoint': icon.codePoint, 
-        'iconColorValue': color.value,
+        'iconCodePoint': (categoryDetails['icon'] as IconData).codePoint, 
+        'iconColorValue': (categoryDetails['color'] as Color).value,
       });
 
       if (!mounted) return;
       Navigator.pop(context); 
       
-    } on FirebaseException catch (e) {
-      debugPrint('Firebase Save Error Code: ${e.code}');
-      debugPrint('Firebase Save Error Message: ${e.message}');
-      
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Save failed: ${e.message} (Code: ${e.code})'),
-              backgroundColor: Colors.red,
-          )
-      );
     } catch (e) {
-      debugPrint('General Save Error: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('General Error: $e'),
-              backgroundColor: Colors.red,
-          )
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -109,52 +77,62 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
   @override
   Widget build(BuildContext context) {
+    // UNIFIED THEME COLORS
+    const Color primaryGreen = Color(0xFF0AA06E);
+    const Color scaffoldBg = Color(0xFFF3F5F9);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: scaffoldBg,
       appBar: AppBar(
-        title: const Text("Add Expense"),
-        backgroundColor: const Color(0xFF0AA06E),
-        foregroundColor: Colors.white,
+        backgroundColor: primaryGreen,
+        elevation: 0,
+        title: const Text("Add Expense", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Amount", style: TextStyle(fontWeight: FontWeight.bold)),
-            TextField(
-              controller: amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                hintText: "0.00",
-                prefixIcon: Icon(Icons.attach_money),
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            const Text("Title", style: TextStyle(fontWeight: FontWeight.bold)),
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(
-                hintText: "e.g. Lunch at Mcdonalds",
-                prefixIcon: Icon(Icons.title),
-                border: OutlineInputBorder(),
-              ),
+            // 1. Name Field
+            const FormLabel('Expense Name'),
+            const SizedBox(height: 6),
+            RoundedTextField(
+              controller: titleController, 
+              hintText: 'e.g. Lunch at Mcdonalds'
             ),
             const SizedBox(height: 16),
 
-            const Text("Category", style: TextStyle(fontWeight: FontWeight.bold)),
+            // 2. Amount Field
+            const FormLabel('Amount'),
+            const SizedBox(height: 6),
+            RoundedTextField(
+              controller: amountController,
+              prefix: const Text('\$', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              hintText: '0.00',
+            ),
+            const SizedBox(height: 16),
+
+            // 3. Category Dropdown
+            const FormLabel('Category'),
+            const SizedBox(height: 6),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(4),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14), 
+                border: Border.all(color: Colors.grey.shade300), 
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: selectedCategory,
                   isExpanded: true,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                  borderRadius: BorderRadius.circular(14),
                   items: categories.map((String value) {
                     return DropdownMenuItem<String>(
                       value: value,
@@ -171,29 +149,34 @@ class _AddExpensePageState extends State<AddExpensePage> {
             ),
             const SizedBox(height: 16),
 
-            const Text("Notes (Optional)", style: TextStyle(fontWeight: FontWeight.bold)),
-            TextField(
-              controller: notesController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: "Additional details...",
-                border: OutlineInputBorder(),
-              ),
+            // 4. Notes Field
+            const FormLabel('Notes (Optional)'),
+            const SizedBox(height: 6),
+            RoundedTextField(
+              controller: notesController, 
+              hintText: 'Add any additional details...', 
+              maxLines: 3
             ),
             const SizedBox(height: 24),
 
+            // 5. Submit Button
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
+              child: ElevatedButton.icon(
                 onPressed: isLoading ? null : _saveExpense,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0AA06E),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                icon: isLoading 
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Icon(Icons.check_circle_outline, color: Colors.white),
+                label: Text(
+                  isLoading ? "Saving..." : "Save Expense", 
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                 ),
-                child: isLoading 
-                  ? const CircularProgressIndicator(color: Colors.white) 
-                  : const Text("Save Expense"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryGreen,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 2,
+                ),
               ),
             ),
           ],
