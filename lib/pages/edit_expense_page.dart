@@ -1,9 +1,8 @@
 import 'package:expense_tracker_3_0/models/all_expense_model.dart';
 import 'package:expense_tracker_3_0/widgets/form_fields.dart'; 
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 import '../firestore_functions.dart'; 
-
-// --- (Your FormLabel and RoundedTextField imports are assumed) ---
 
 class EditExpensePage extends StatefulWidget {
   final Expense expense;
@@ -20,10 +19,6 @@ class _EditExpensePageState extends State<EditExpensePage> {
   late TextEditingController notesController;
 
   late String category;
-  late String dateLabel;
-  // State variables for non-editable data from the expense model
-  late int iconCodePoint;
-  late int iconColorValue;
 
   @override
   void initState() {
@@ -33,37 +28,56 @@ class _EditExpensePageState extends State<EditExpensePage> {
         TextEditingController(text: widget.expense.amount.toString());
     notesController = TextEditingController(text: widget.expense.notes);
     category = widget.expense.category;
-    dateLabel = widget.expense.dateLabel;
-    iconCodePoint = widget.expense.iconCodePoint;
-    iconColorValue = widget.expense.iconColorValue;
   }
 
-  // 🔥 THE FIX: Renamed method to avoid collision with the imported updateExpense function.
+  // 🔥 Same helper logic to keep icons consistent
+  Map<String, dynamic> _getCategoryDetails(String category) {
+    switch (category) {
+      case 'Food':
+        return {'icon': Icons.fastfood, 'color': const Color(0xFFFF9F0A)};
+      case 'Transport':
+        return {'icon': Icons.directions_car, 'color': const Color(0xFF0A84FF)};
+      case 'Shopping':
+        return {'icon': Icons.shopping_bag, 'color': const Color(0xFFBF5AF2)};
+      case 'Bills':
+        return {'icon': Icons.receipt_long, 'color': const Color(0xFFFF375F)};
+      case 'Entertainment':
+        return {'icon': Icons.movie, 'color': const Color(0xFF5E5CE6)};
+      case 'Health':
+        return {'icon': Icons.medical_services, 'color': const Color(0xFF32D74B)};
+      default:
+        return {'icon': Icons.grid_view, 'color': const Color(0xFF8E8E93)};
+    }
+  }
+
   void _handleUpdateExpense() async {
-    // Simple validation
     if (nameController.text.trim().isEmpty || amountController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Name and Amount are required.')));
       return;
     }
+
+    final now = DateTime.now(); 
+    final newDateLabel = "${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}/${now.year}";
     
-    // 1. Create the updated Expense object, preserving the original ID
+    // 🔥 Get updated icon/color based on the (potentially new) category
+    final categoryDetails = _getCategoryDetails(category);
+
     final updatedExpense = Expense(
-      id: widget.expense.id, // CRITICAL: Keeps the original ID
+      id: widget.expense.id, 
       title: nameController.text.trim(),
       amount: double.tryParse(amountController.text) ?? 0.0,
       category: category,
-      dateLabel: dateLabel,
+      dateLabel: newDateLabel,
+      date: Timestamp.fromDate(now),
       notes: notesController.text.trim(),
-      iconCodePoint: iconCodePoint,
-      iconColorValue: iconColorValue, date: widget.expense.date,
-      // You should also pass the 'date' Timestamp here if sorting relies on it
-      // For this example, we assume the sorting is just fine without updating the date.
+      
+      // 🔥 FIX: Update icon based on the new category
+      iconCodePoint: (categoryDetails['icon'] as IconData).codePoint,
+      iconColorValue: (categoryDetails['color'] as Color).value, 
     );
 
-    // 2. Call the globally imported updateExpense function to overwrite the existing document
     await updateExpense(updatedExpense);
 
-    // Close page
     if (mounted) {
       Navigator.pop(context);
     }
@@ -80,6 +94,10 @@ class _EditExpensePageState extends State<EditExpensePage> {
   @override
   Widget build(BuildContext context) {
     final List<String> categories = ['Supplies', 'Meals', 'Travel', 'Software', 'Food', 'Transport', 'Bills', 'Entertainment', 'Health', 'Other'];
+
+    if (!categories.contains(category)) {
+      categories.add(category);
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5F9),
@@ -120,54 +138,31 @@ class _EditExpensePageState extends State<EditExpensePage> {
 
             const FormLabel('Category'),
             const SizedBox(height: 6),
-            GestureDetector(
-              onTap: () async {
-                final selected = await showDialog<String>(
-                  context: context,
-                  builder: (ctx) => SimpleDialog(
-                    title: const Text('Select category'),
-                    children: categories.map((c) => 
-                      SimpleDialogOption(
-                        onPressed: () => Navigator.pop(ctx, c), 
-                        child: Text(c)
-                      )
-                    ).toList(),
-                  ),
-                );
-                if (selected != null) setState(() => category = selected);
-              },
-              child: RoundedTextField(
-                controller: TextEditingController(text: category), 
-                hintText: category,
-                suffixIcon: const Icon(Icons.keyboard_arrow_down_rounded),
-                readOnly: true,
-                key: ValueKey(category), 
+            
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12), 
+                border: Border.all(color: Colors.transparent), 
               ),
-            ),
-            const SizedBox(height: 16),
-
-            const FormLabel('Date'),
-            const SizedBox(height: 6),
-            GestureDetector(
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: DateTime.now(),
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime(2100),
-                );
-                if (picked != null) {
-                  setState(() {
-                    dateLabel = '${picked.month.toString().padLeft(2,'0')}/${picked.day.toString().padLeft(2,'0')}/${picked.year}';
-                  });
-                }
-              },
-              child: RoundedTextField(
-                controller: TextEditingController(text: dateLabel),
-                hintText: dateLabel,
-                suffixIcon: const Icon(Icons.calendar_today_rounded, size: 18),
-                readOnly: true,
-                key: ValueKey(dateLabel), 
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: category,
+                  isExpanded: true,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                  items: categories.map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  onChanged: (newValue) {
+                    setState(() {
+                      category = newValue!;
+                    });
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -180,9 +175,9 @@ class _EditExpensePageState extends State<EditExpensePage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _handleUpdateExpense, // ✅ Calls the corrected local method
+                onPressed: _handleUpdateExpense,
                 icon: const Icon(Icons.save, color: Colors.white),
-                label: const Text("Update Expense"),
+                label: const Text("Update Expense", style: TextStyle(color: Colors.white),),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00A54C),
                   padding: const EdgeInsets.symmetric(vertical: 14),

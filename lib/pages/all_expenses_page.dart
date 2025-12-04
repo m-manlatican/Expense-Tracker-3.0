@@ -1,5 +1,6 @@
 import 'package:expense_tracker_3_0/cards/all_expenses_listview.dart';
 import 'package:expense_tracker_3_0/models/all_expense_model.dart';
+import 'package:expense_tracker_3_0/pages/dashboard_page.dart';
 import 'package:expense_tracker_3_0/pages/edit_expense_page.dart';
 import 'package:flutter/material.dart';
 import '../firestore_functions.dart'; 
@@ -41,7 +42,11 @@ class AllExpensesPageState extends State<AllExpensesPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
           onPressed: () {
-            Navigator.pop(context);
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => DashboardPage()
+              )
+            );
           },
         ),
         actions: [

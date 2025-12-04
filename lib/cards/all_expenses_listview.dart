@@ -2,7 +2,6 @@ import 'package:expense_tracker_3_0/cards/all_expense_card.dart';
 import 'package:expense_tracker_3_0/models/all_expense_model.dart';
 import 'package:flutter/material.dart';
 
-
 class AllExpensesListView extends StatelessWidget {
   final List<Expense> expenses;
   final void Function(Expense) onEdit;
@@ -17,17 +16,22 @@ class AllExpensesListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (expenses.isEmpty) {
+      return const Center(
+        child: Text("No expenses yet", style: TextStyle(color: Colors.grey)),
+      );
+    }
+    
     return ListView.builder(
       itemCount: expenses.length,
       itemBuilder: (context, index) {
         final expense = expenses[index];
         return ExpenseCard(
           expense: expense,
-          onEdit: () => onEdit(expense),      // use onEdit prop
-          onDelete: () => onDelete(expense),  // use onDelete prop
+          onEdit: () => onEdit(expense),
+          onDelete: () => onDelete(expense),
         );
       },
     );
   }
 }
-

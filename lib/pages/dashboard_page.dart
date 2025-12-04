@@ -1,6 +1,7 @@
 import 'package:expense_tracker_3_0/cards/available_budget_card.dart';
 import 'package:expense_tracker_3_0/cards/spending_overview_card.dart';
 import 'package:expense_tracker_3_0/cards/total_spent_card.dart';
+import 'package:expense_tracker_3_0/cards/total_budget_card.dart'; 
 import 'package:expense_tracker_3_0/pages/add_expense_page.dart'; 
 import 'package:expense_tracker_3_0/pages/all_expenses_page.dart'; 
 import 'package:expense_tracker_3_0/widgets/head_clipper.dart';
@@ -20,19 +21,39 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   int _selectedIndex = 0; 
   
-  // 1. Declare _widgetOptions without initialization
-  late final List<Widget> _widgetOptions; 
+  // STATE
+  double _totalBudget = 5000.00; 
+  final double _totalSpent = 2000.00;
+
+  List<Widget> _widgetOptions = []; 
 
   @override
   void initState() {
     super.initState();
-    // 2. Initialize _widgetOptions here, where _goToExpensesTab is available
+    _rebuildWidgets();
+  }
+
+  void _rebuildWidgets() {
     _widgetOptions = <Widget>[
-      // Pass the function to _DashboardContent
-      _DashboardContent(onViewAllExpenses: _goToExpensesTab),     // Index 0: Home Dashboard 
-      const AllExpensesPage(), // Index 1: All Expenses List
-      const Center(child: Text('Reports Page Content', style: TextStyle(fontSize: 24, color: _primaryGreen))), // Index 2: Reports
+      _DashboardContent(
+        onViewAllExpenses: _goToExpensesTab,
+        totalBudget: _totalBudget,
+        totalSpent: _totalSpent,
+        onBudgetChanged: _updateBudget,
+      ),
+      const AllExpensesPage(),
+      const Center(child: Text('Reports Page Content', style: TextStyle(fontSize: 24, color: _primaryGreen))),
     ];
+  }
+
+  void _updateBudget(double newBudget) {
+    // FIX: Check if the widget is still in the tree before updating state
+    if (!mounted) return;
+    
+    setState(() {
+      _totalBudget = newBudget;
+      _rebuildWidgets(); 
+    });
   }
 
   void _goToExpensesTab() {
@@ -42,12 +63,15 @@ class _DashboardPageState extends State<DashboardPage> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
-    }
-    );
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_widgetOptions.isEmpty) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       body: _widgetOptions.elementAt(_selectedIndex), 
 
@@ -97,16 +121,25 @@ class _DashboardPageState extends State<DashboardPage> {
 
 class _DashboardContent extends StatelessWidget {
   final VoidCallback onViewAllExpenses; 
+  final double totalBudget;
+  final double totalSpent;
+  final Function(double) onBudgetChanged;
+
+  const _DashboardContent({
+    required this.onViewAllExpenses,
+    required this.totalBudget,
+    required this.totalSpent,
+    required this.onBudgetChanged,
+  });
 
   Future<void> _signOut() async {
     await FirebaseAuth.instance.signOut();
   }
-
-  // FIX: Use const on the key parameter to satisfy the Dart analyzer
-  const _DashboardContent({required this.onViewAllExpenses});
   
   @override
   Widget build(BuildContext context) {
+    final double availableBalance = totalBudget - totalSpent;
+
     return SafeArea(
       child: Stack(
         children: [
@@ -130,10 +163,25 @@ class _DashboardContent extends StatelessWidget {
               children: [
                 HeaderTitle(onSignOut: _signOut), 
                 const SizedBox(height: 20),
-                const TotalSpentCard(),
+                
+                TotalBudgetCard(
+                  currentBudget: totalBudget,
+                  onBudgetChanged: onBudgetChanged,
+                ),
+
                 const SizedBox(height: 12),
+                
+                TotalSpentCard(
+                  spentAmount: totalSpent,
+                  totalBudget: totalBudget,
+                ),
+
                 const SizedBox(height: 12),
-                AvailableBudgetCard(),
+                
+                AvailableBudgetCard(
+                  balance: availableBalance,
+                ),
+                
                 const SizedBox(height: 16),
                 SpendingOverviewCard(),
               ],

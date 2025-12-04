@@ -11,13 +11,25 @@ class HeaderTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 🔥 Get current date dynamically
+    final now = DateTime.now();
+    
+    // Simple list to map month numbers to names
+    const List<String> months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
+    // Format: "Month Year" (e.g., December 2025)
+    final String dateDisplay = '${months[now.month - 1]} ${now.year}';
+
     return Row(
       children: [
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'Dashboard',
                 style: TextStyle(
                   color: Colors.white,
@@ -25,10 +37,10 @@ class HeaderTitle extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
-                'November 2025',
-                style: TextStyle(
+                dateDisplay, // 🔥 Updated to show dynamic date
+                style: const TextStyle(
                   color: Colors.white70,
                   fontSize: 13,
                 ),
