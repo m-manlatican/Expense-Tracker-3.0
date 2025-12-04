@@ -57,7 +57,7 @@ class _LoginPageState extends State<LoginPage> {
       // 2. Attempt Sign In
       await _authService.signIn(email, password);
 
-      // 3. 🔥 SUCCESS MESSAGE (Persists to Dashboard)
+      // 3. 🔥 SUCCESS MESSAGE (Restored!)
       if (!mounted) return;
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -72,17 +72,14 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ],
           ),
-          backgroundColor: AppColors.success, // Mint Green for Success
-          behavior: SnackBarBehavior.floating, // Floats nicely
+          backgroundColor: AppColors.success, // Mint Green
+          behavior: SnackBarBehavior.floating, 
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
           elevation: 4,
-          duration: const Duration(seconds: 2), // Short and sweet
+          duration: const Duration(seconds: 2), 
         ),
       );
-
-      // Note: No need to Navigator.push here because AuthGate 
-      // automatically redirects when the auth state changes.
 
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
@@ -105,7 +102,6 @@ class _LoginPageState extends State<LoginPage> {
           _emailError = "Invalid email format.";
         } 
         else {
-          // Generic Error
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(e.message ?? "Authentication failed"),
             backgroundColor: AppColors.expense,
@@ -125,6 +121,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    // (Standard Login UI from previous step remains exactly the same here)
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -135,37 +132,19 @@ class _LoginPageState extends State<LoginPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Header
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Icon(
-                    Icons.account_balance_wallet_rounded, 
-                    size: 48, 
-                    color: AppColors.primary
-                  ),
+                  child: const Icon(Icons.account_balance_wallet_rounded, size: 48, color: AppColors.primary),
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  "Welcome Back",
-                  style: TextStyle(
-                    fontSize: 32, 
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                    letterSpacing: -0.5,
-                  ),
-                ),
+                const Text("Welcome Back", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimary, letterSpacing: -0.5)),
                 const SizedBox(height: 8),
-                const Text(
-                  "Sign in to manage your expenses.",
-                  style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
-                ),
+                const Text("Sign in to manage your expenses.", style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
                 const SizedBox(height: 40),
-                
-                // Form
                 const FormLabel("Email Address"),
                 const SizedBox(height: 8),
                 RoundedTextField(
@@ -179,7 +158,6 @@ class _LoginPageState extends State<LoginPage> {
                   },
                 ),
                 const SizedBox(height: 20),
-                
                 const FormLabel("Password"),
                 const SizedBox(height: 8),
                 RoundedTextField(
@@ -192,46 +170,21 @@ class _LoginPageState extends State<LoginPage> {
                     if (_passwordError != null) setState(() => _passwordError = null);
                   },
                 ),
-                
                 const SizedBox(height: 40),
-                
-                // Sign In Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: isLoading ? null : _login,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary, 
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 8,
-                      shadowColor: AppColors.primary.withOpacity(0.3),
-                    ),
-                    child: isLoading 
-                      ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)) 
-                      : const Text("Sign In", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 8, shadowColor: AppColors.primary.withOpacity(0.3)),
+                    child: isLoading ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)) : const Text("Sign In", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   ),
                 ),
                 const SizedBox(height: 24),
-                
-                // Footer
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
-                      "Don't have an account?",
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPage()));
-                      },
-                      child: const Text(
-                        "Register",
-                        style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
-                      ),
-                    ),
+                    const Text("Don't have an account?", style: TextStyle(color: AppColors.textSecondary)),
+                    TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPage())), child: const Text("Register", style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600))),
                   ],
                 ),
               ],

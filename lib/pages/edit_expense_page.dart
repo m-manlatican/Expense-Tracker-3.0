@@ -1,13 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker_3_0/app_colors.dart';
 import 'package:expense_tracker_3_0/models/all_expense_model.dart';
+import 'package:expense_tracker_3_0/services/firestore_service.dart';
 import 'package:expense_tracker_3_0/widgets/form_fields.dart'; 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; 
-import '../firestore_functions.dart'; 
 
 class EditExpensePage extends StatefulWidget {
   final Expense expense;
-
   const EditExpensePage({super.key, required this.expense});
 
   @override
@@ -19,6 +18,7 @@ class _EditExpensePageState extends State<EditExpensePage> {
   late TextEditingController amountController;
   late TextEditingController notesController;
   late String category;
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
@@ -48,7 +48,6 @@ class _EditExpensePageState extends State<EditExpensePage> {
     }
 
     final now = DateTime.now(); 
-    final newDateLabel = "${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}/${now.year}";
     final categoryDetails = _getCategoryDetails(category);
 
     final updatedExpense = Expense(
@@ -56,14 +55,16 @@ class _EditExpensePageState extends State<EditExpensePage> {
       title: nameController.text.trim(),
       amount: double.tryParse(amountController.text) ?? 0.0,
       category: category,
-      dateLabel: newDateLabel,
+      dateLabel: "${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}/${now.year}",
       date: Timestamp.fromDate(now),
       notes: notesController.text.trim(),
       iconCodePoint: (categoryDetails['icon'] as IconData).codePoint,
       iconColorValue: (categoryDetails['color'] as Color).value, 
     );
 
-    await updateExpense(updatedExpense);
+    // SRP: Use Service
+    await _firestoreService.updateExpense(updatedExpense);
+
     if (mounted) Navigator.pop(context);
   }
 
@@ -84,44 +85,17 @@ class _EditExpensePageState extends State<EditExpensePage> {
       backgroundColor: AppColors.background,
       body: Column(
         children: [
-          // 🔥 CUSTOM HEADER
           Container(
             padding: const EdgeInsets.only(top: 50, left: 16, right: 16, bottom: 20),
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
-            ),
+            decoration: const BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.vertical(bottom: Radius.circular(30))),
             child: Row(
               children: [
-                InkWell(
-                  onTap: () => Navigator.pop(context),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-                  ),
-                ),
-                const Expanded(
-                  child: Center(
-                    child: Text(
-                      "Edit Expense",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
+                InkWell(onTap: () => Navigator.pop(context), child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.arrow_back, color: Colors.white, size: 20))),
+                const Expanded(child: Center(child: Text("Edit Expense", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600)))),
                 const SizedBox(width: 40),
               ],
             ),
           ),
-
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -132,66 +106,38 @@ class _EditExpensePageState extends State<EditExpensePage> {
                   const SizedBox(height: 6),
                   RoundedTextField(controller: nameController, hintText: 'e.g. Office Supplies'),
                   const SizedBox(height: 16),
-
                   const FormLabel('Amount'),
                   const SizedBox(height: 6),
-                  RoundedTextField(
-                    controller: amountController,
-                    prefix: const Text('\$', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    hintText: '0.00',
-                  ),
+                  RoundedTextField(controller: amountController, prefix: const Text('\$', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)), keyboardType: const TextInputType.numberWithOptions(decimal: true), hintText: '0.00'),
                   const SizedBox(height: 16),
-
                   const FormLabel('Category'),
                   const SizedBox(height: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14), 
-                      border: Border.all(color: Colors.grey.shade200), 
-                    ),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.grey.shade200)),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: category,
                         isExpanded: true,
                         icon: const Icon(Icons.keyboard_arrow_down_rounded),
                         borderRadius: BorderRadius.circular(14),
-                        items: categories.map((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
-                          );
-                        }).toList(),
-                        onChanged: (newValue) {
-                          setState(() {
-                            category = newValue!;
-                          });
-                        },
+                        items: categories.map((String value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                        onChanged: (newValue) => setState(() => category = newValue!),
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
-
                   const FormLabel('Notes (Optional)'),
                   const SizedBox(height: 6),
-                  RoundedTextField(controller: notesController, hintText: 'Add any additional details...', maxLines: 3),
+                  RoundedTextField(controller: notesController, hintText: 'Add details...', maxLines: 3),
                   const SizedBox(height: 24),
-
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: _handleUpdateExpense,
                       icon: const Icon(Icons.save, color: Colors.white),
                       label: const Text("Update Expense", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        elevation: 4,
-                        shadowColor: AppColors.primary.withOpacity(0.4),
-                      ),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), elevation: 4),
                     ),
                   )
                 ],
