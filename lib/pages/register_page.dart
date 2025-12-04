@@ -1,4 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:expense_tracker_3_0/app_colors.dart';
+import 'package:expense_tracker_3_0/services/auth_service.dart'; // SRP
+import 'package:expense_tracker_3_0/widgets/form_fields.dart'; 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -13,36 +15,78 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final AuthService _authService = AuthService(); // Use Service
+  
+  String? _nameError;
+  String? _emailError;
+  String? _passwordError;
   bool isLoading = false;
 
-  // UNIFIED THEME COLORS
-  final Color primaryGreen = const Color(0xFF0AA06E);
-  final Color scaffoldBg = const Color(0xFFF3F5F9);
+  void _clearErrors() {
+    setState(() {
+      _nameError = null;
+      _emailError = null;
+      _passwordError = null;
+    });
+  }
 
   Future<void> _register() async {
+    _clearErrors();
+
     final name = nameController.text.trim();
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
+    bool isValid = true;
 
-    if (name.isEmpty || email.isEmpty || password.isEmpty) return;
+    // 1. Client-side Validation
+    if (name.isEmpty) {
+      setState(() => _nameError = "Full name is required");
+      isValid = false;
+    }
+    if (email.isEmpty) {
+      setState(() => _emailError = "Email is required");
+      isValid = false;
+    } else if (!email.contains('@')) {
+      setState(() => _emailError = "Invalid email format");
+      isValid = false;
+    }
+    if (password.isEmpty) {
+      setState(() => _passwordError = "Password is required");
+      isValid = false;
+    } else if (password.length < 6) {
+      setState(() => _passwordError = "Password must be at least 6 characters");
+      isValid = false;
+    }
+
+    if (!isValid) return;
 
     try {
       setState(() => isLoading = true);
       
-      UserCredential userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email, password: password);
-      
-      await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
-        'fullName': name,
-        'email': email,
-        'createdAt': Timestamp.now(),
-      });
+      // 2. SRP: Call Service
+      await _authService.register(email: email, password: password, fullName: name);
 
       if (!mounted) return;
       Navigator.pop(context); 
 
     } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message ?? 'Error')));
+      if (!mounted) return;
+
+      setState(() {
+        // 3. Map Errors to Fields
+        if (e.code == 'email-already-in-use') {
+          _emailError = "This email is already registered.";
+        } else if (e.code == 'invalid-email') {
+          _emailError = "Invalid email address.";
+        } else if (e.code == 'weak-password') {
+          _passwordError = "Password is too weak.";
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e.message ?? "Registration failed"),
+            backgroundColor: AppColors.expense,
+          ));
+        }
+      });
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -51,69 +95,95 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: scaffoldBg, // Unified Background
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent, 
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black54),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-        child: Column(
-          children: [
-            const Text(
-              "Create Account", 
-              style: TextStyle(
-                fontSize: 28, 
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 40),
-            
-            // Reusing specific styling for simplicity, but colored with Theme Green
-            _buildTextField(nameController, "Full Name", Icons.person, false),
-            const SizedBox(height: 20),
-            
-            _buildTextField(emailController, "Email", Icons.email, false),
-            const SizedBox(height: 20),
-            
-            _buildTextField(passwordController, "Password", Icons.lock, true),
-            const SizedBox(height: 40),
-            
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: isLoading ? null : _register,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryGreen, // Unified Button Color
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 2,
-                ),
-                child: isLoading 
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
-                  : const Text("Register", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
-    );
-  }
-
-  Widget _buildTextField(TextEditingController controller, String label, IconData icon, bool isObscure) {
-    return TextField(
-      controller: controller,
-      obscureText: isObscure,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.black54),
-        prefixIcon: Icon(icon, color: Colors.black54),
-        border: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.black38)),
-        enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.black38)),
-        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryGreen, width: 2)),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 10),
+              const Text("Create Account", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimary, letterSpacing: -0.5)),
+              const SizedBox(height: 8),
+              const Text("Start tracking your expenses today.", style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
+              const SizedBox(height: 40),
+              
+              const FormLabel("Full Name"),
+              const SizedBox(height: 8),
+              RoundedTextField(
+                controller: nameController,
+                hintText: "John Doe",
+                prefix: const Icon(Icons.person_outline),
+                errorText: _nameError,
+                onChanged: (_) => setState(() => _nameError = null),
+              ),
+              const SizedBox(height: 20),
+              
+              const FormLabel("Email Address"),
+              const SizedBox(height: 8),
+              RoundedTextField(
+                controller: emailController,
+                hintText: "hello@example.com",
+                prefix: const Icon(Icons.email_outlined),
+                keyboardType: TextInputType.emailAddress,
+                errorText: _emailError,
+                onChanged: (_) => setState(() => _emailError = null),
+              ),
+              const SizedBox(height: 20),
+              
+              const FormLabel("Password"),
+              const SizedBox(height: 8),
+              RoundedTextField(
+                controller: passwordController,
+                hintText: "••••••••",
+                prefix: const Icon(Icons.lock_outline),
+                obscureText: true,
+                errorText: _passwordError,
+                onChanged: (_) => setState(() => _passwordError = null),
+              ),
+              const SizedBox(height: 40),
+              
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: isLoading ? null : _register,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary, 
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 8,
+                    shadowColor: AppColors.primary.withOpacity(0.3),
+                  ),
+                  child: isLoading 
+                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)) 
+                    : const Text("Create Account", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Center(
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text.rich(
+                    TextSpan(
+                      text: "Already have an account? ",
+                      style: TextStyle(color: AppColors.textSecondary),
+                      children: [TextSpan(text: "Sign In", style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600))],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

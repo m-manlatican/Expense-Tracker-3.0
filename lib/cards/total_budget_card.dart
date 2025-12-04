@@ -1,8 +1,6 @@
+import 'package:expense_tracker_3_0/app_colors.dart'; // Using AppColors
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
-const Color _primaryGreen = Color(0xFF0AA06E);
-const Color _kLightBgColor = Color(0xFFE8FFF6);
 
 class TotalBudgetCard extends StatefulWidget {
   final double currentBudget;
@@ -20,13 +18,24 @@ class TotalBudgetCard extends StatefulWidget {
 
 class _TotalBudgetCardState extends State<TotalBudgetCard> {
   void _showEditBudgetModal() {
-    final TextEditingController controller = TextEditingController(
-      text: widget.currentBudget.toStringAsFixed(2),
-    );
+    // 🔥 FIX: Clean text logic
+    // 1. If budget is 0, show empty string.
+    // 2. If budget is 5000.00, show "5000".
+    // 3. If budget is 5000.50, show "5000.50".
+    String initialText;
+    if (widget.currentBudget == 0) {
+      initialText = '';
+    } else {
+      // Use num.parse to strip trailing zeros naturally if it's a whole number
+      initialText = num.parse(widget.currentBudget.toStringAsFixed(2)).toString();
+    }
+
+    final TextEditingController controller = TextEditingController(text: initialText);
 
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent, // For rounded corners effect
       builder: (BuildContext context) {
         return Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -34,8 +43,8 @@ class _TotalBudgetCardState extends State<TotalBudgetCard> {
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20.0),
-                topRight: Radius.circular(20.0),
+                topLeft: Radius.circular(24.0),
+                topRight: Radius.circular(24.0),
               ),
             ),
             padding: const EdgeInsets.all(30.0),
@@ -48,7 +57,7 @@ class _TotalBudgetCardState extends State<TotalBudgetCard> {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: _primaryGreen,
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -58,14 +67,23 @@ class _TotalBudgetCardState extends State<TotalBudgetCard> {
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
                   ],
+                  style: const TextStyle(fontSize: 18),
                   decoration: InputDecoration(
                     labelText: 'Total Amount',
-                    prefixText: '\$',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: _primaryGreen, width: 2.0),
+                    prefixText: '\$ ',
+                    labelStyle: const TextStyle(color: AppColors.textSecondary),
+                    prefixStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.primary, width: 2.0),
+                    ),
+                    filled: true,
+                    fillColor: AppColors.background,
                   ),
                   autofocus: true,
                 ),
@@ -75,23 +93,17 @@ class _TotalBudgetCardState extends State<TotalBudgetCard> {
                   child: ElevatedButton(
                     onPressed: () {
                       final newText = controller.text.trim();
-                      final newAmount = double.tryParse(newText);
+                      final newAmount = double.tryParse(newText) ?? 0.0; // Default to 0 if empty
 
-                      if (newAmount != null && newAmount >= 0) {
-                        // FIX: Close the modal FIRST, then trigger the update.
-                        Navigator.pop(context);
-                        widget.onBudgetChanged(newAmount);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter a valid amount.')),
-                        );
-                      }
+                      Navigator.pop(context);
+                      widget.onBudgetChanged(newAmount);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _primaryGreen,
+                      backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
                     ),
                     child: const Text('Save Changes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   ),
@@ -127,12 +139,12 @@ class _TotalBudgetCardState extends State<TotalBudgetCard> {
             height: 36,
             width: 36,
             decoration: BoxDecoration(
-              color: _kLightBgColor,
+              color: AppColors.secondary, // Light Indigo
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
               Icons.account_balance_wallet_outlined,
-              color: _primaryGreen,
+              color: AppColors.primary, // Iris Blue
               size: 22,
             ),
           ),
@@ -146,7 +158,7 @@ class _TotalBudgetCardState extends State<TotalBudgetCard> {
                   'Total Budget', 
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.black54,
+                    color: AppColors.textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -156,7 +168,7 @@ class _TotalBudgetCardState extends State<TotalBudgetCard> {
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black87,
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ],
@@ -165,9 +177,7 @@ class _TotalBudgetCardState extends State<TotalBudgetCard> {
 
           IconButton(
             icon: const Icon(Icons.edit),
-            color: _primaryGreen,
-            splashColor: _primaryGreen.withOpacity(0.2),
-            highlightColor: _primaryGreen.withOpacity(0.3),
+            color: AppColors.primary,
             onPressed: _showEditBudgetModal,
             tooltip: 'Edit Total Budget',
           ),
