@@ -5,15 +5,19 @@ import 'package:flutter/material.dart';
 class ExpenseCard extends StatelessWidget {
   final Expense expense;
   final VoidCallback onEdit;
+  // Note: onDelete is handled by the ListView Swipe action now
 
   const ExpenseCard({
-    super.key,
-    required this.expense,
-    required this.onEdit,
+    super.key, 
+    required this.expense, 
+    required this.onEdit
   });
 
   @override
   Widget build(BuildContext context) {
+    final amountColor = expense.isIncome ? AppColors.success : AppColors.textPrimary;
+    final prefix = expense.isIncome ? "+ " : "- ";
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       padding: const EdgeInsets.all(16),
@@ -47,12 +51,15 @@ class ExpenseCard extends StatelessWidget {
                   children: [
                     Text(
                       expense.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                        color: AppColors.textPrimary,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.textPrimary),
                     ),
+                    if (expense.quantity != null)
+                      Text(
+                        "${expense.quantity} pcs @ ₱${(expense.amount / (expense.quantity ?? 1)).toStringAsFixed(2)}",
+                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      )
+                    else
+                      Text(expense.category, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                   ],
                 ),
               ),
@@ -60,68 +67,29 @@ class ExpenseCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '₱${expense.amount.toStringAsFixed(2)}', 
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                      color: AppColors.textPrimary,
-                    ),
+                    '$prefix₱${expense.amount.toStringAsFixed(2)}', 
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: amountColor)
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    expense.dateLabel,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
+                  Text(expense.dateLabel, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                 ],
               ),
             ],
           ),
-          Row(
-            children: [
-              const SizedBox(width: 54),
-              Text(
-                expense.category,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-          if (expense.notes.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(left: 54, top: 4),
-              child: Text(
-                expense.notes,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textPrimary,
-                ),
+          const SizedBox(height: 12),
+          // 🔥 ONLY EDIT BUTTON (Delete is Swipe)
+          Align(
+            alignment: Alignment.centerRight,
+            child: InkWell(
+              onTap: onEdit,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(8)),
+                child: const Text("Edit", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
               ),
             ),
-          const SizedBox(height: 12),
-          // 🔥 Only Edit Button remains
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  backgroundColor: AppColors.secondary.withOpacity(0.2),
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  minimumSize: Size.zero,
-                ),
-                icon: const Icon(Icons.edit, size: 16),
-                label: const Text('Edit', style: TextStyle(fontWeight: FontWeight.w600)),
-                onPressed: onEdit,
-              ),
-            ],
-          ),
+          )
         ],
       ),
     );

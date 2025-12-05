@@ -12,60 +12,100 @@ class AddExpensePage extends StatefulWidget {
   State<AddExpensePage> createState() => _AddExpensePageState();
 }
 
+enum TransactionType { expense, income }
+
 class _AddExpensePageState extends State<AddExpensePage> {
   final TextEditingController titleController = TextEditingController();
-  final TextEditingController amountController = TextEditingController();
+  final TextEditingController priceController = TextEditingController();
+  final TextEditingController qtyController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
-  final FirestoreService _firestoreService = FirestoreService();
-  
-  late Stream<double> _budgetStream;
-  late Stream<List<Expense>> _expensesStream;
+  final TextEditingController amountController = TextEditingController(); 
 
-  String selectedCategory = 'Food';
+  final FirestoreService _firestoreService = FirestoreService();
+  late Stream<List<Expense>> _expensesStream;
+  late Stream<double> _budgetStream; 
+
+  // State
+  TransactionType _type = TransactionType.expense; 
+  String selectedCategory = Expense.expenseCategories.first;
   bool isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _budgetStream = _firestoreService.getUserBudgetStream();
     _expensesStream = _firestoreService.getExpensesStream();
-    
-    if (!Expense.categories.contains(selectedCategory)) {
-      selectedCategory = Expense.categories.first;
-    }
+    _budgetStream = _firestoreService.getUserBudgetStream();
   }
 
-  Future<void> _saveExpense(double availableBalance, double totalBudget) async {
+  void _setType(TransactionType type) {
+    setState(() {
+      _type = type;
+      selectedCategory = _type == TransactionType.income 
+          ? Expense.incomeCategories.first 
+          : Expense.expenseCategories.first;
+      
+      priceController.clear();
+      qtyController.clear();
+      amountController.clear();
+    });
+  }
+
+  Future<void> _saveTransaction(double availableBalance) async {
     final title = titleController.text.trim();
-    final amountText = amountController.text.trim();
-
-    if (title.isEmpty || amountText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill required fields.')));
+    
+    if (title.isEmpty) {
+      _showSnack('Please enter a description.');
       return;
     }
 
-    final double amount = double.parse(amountText);
+    double finalAmount = 0.0;
+    int? finalQty;
 
-    if (totalBudget <= 0) {
-      _showErrorDialog("No Budget Set", "You need to set a budget in the Dashboard before adding expenses.");
+    // 1. CALCULATE (Price * Qty)
+    final price = double.tryParse(priceController.text.trim());
+    final qty = int.tryParse(qtyController.text.trim());
+    
+    if (price != null && qty != null && price > 0 && qty > 0) {
+      finalAmount = price * qty;
+      finalQty = qty;
+    } else {
+      _showSnack('Please enter valid Price and Quantity.');
       return;
     }
 
-    if (amount > availableBalance) {
-      _showErrorDialog("Insufficient Budget", "This expense (₱$amount) exceeds your available balance (₱$availableBalance).");
-      return;
+    // 2. BUSINESS LOGIC CHECK
+    if (_type == TransactionType.expense) {
+      if (availableBalance <= 0) {
+        _showErrorDialog(
+          "Insufficient Funds", 
+          "You have ₱0.00 cash on hand. Go to Dashboard to add Capital, or record a Sale first.",
+          isCritical: true 
+        );
+        return;
+      }
+      if (finalAmount > availableBalance) {
+        _showErrorDialog(
+          "Insufficient Funds", 
+          "This expense (₱${finalAmount.toStringAsFixed(2)}) exceeds your available cash (₱${availableBalance.toStringAsFixed(2)})."
+        );
+        return;
+      }
     }
 
+    // 3. SAVE TO DB
     try {
       setState(() => isLoading = true);
       final now = DateTime.now(); 
       final categoryDetails = Expense.getCategoryDetails(selectedCategory);
       
-      final newExpense = Expense(
+      final newTransaction = Expense(
         id: '', 
         title: title, 
         category: selectedCategory, 
-        amount: amount,
+        amount: finalAmount,
+        quantity: finalQty, 
+        isIncome: _type == TransactionType.income,
+        isCapital: false, // Capital is managed in Dashboard
         dateLabel: "${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}/${now.year}",
         date: Timestamp.now(), 
         notes: notesController.text.trim(),
@@ -73,20 +113,26 @@ class _AddExpensePageState extends State<AddExpensePage> {
         iconColorValue: (categoryDetails['color'] as Color).value,
       );
       
-      await _firestoreService.addExpense(newExpense);
-      
+      await _firestoreService.addExpense(newTransaction);
       if (!mounted) return;
+      
+      String msg = _type == TransactionType.income ? "Sale Recorded!" : "Expense Recorded!";
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: AppColors.success));
       Navigator.pop(context); 
       
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      _showSnack('Error: $e');
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
   }
 
-  void _showErrorDialog(String title, String message) {
+  void _showSnack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: AppColors.expense));
+  }
+
+  void _showErrorDialog(String title, String message, {bool isCritical = false}) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -95,15 +141,23 @@ class _AddExpensePageState extends State<AddExpensePage> {
         content: Text(message, style: const TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(
-            onPressed: () { 
-              Navigator.pop(ctx); 
-              if (title == "No Budget Set") Navigator.pop(context); 
-            },
-            child: Text(
-              title == "No Budget Set" ? "Go to Dashboard" : "Okay", 
-              style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
-            ),
-          )
+            onPressed: () => Navigator.pop(ctx), 
+            child: const Text("Cancel", style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          if (isCritical) 
+            ElevatedButton(
+              onPressed: () { 
+                Navigator.pop(ctx); 
+                Navigator.pop(context); // Return to Dashboard
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              child: const Text("Go to Dashboard"),
+            )
+          else 
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("Okay", style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+            )
         ],
       ),
     );
@@ -111,14 +165,20 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
   @override
   Widget build(BuildContext context) {
+    // 🔥 FIX: Define isIncome here so it can be used in the UI
+    final bool isIncome = _type == TransactionType.income;
+    
+    final List<String> currentCategories = isIncome 
+        ? Expense.incomeCategories 
+        : Expense.expenseCategories;
+
     return StreamBuilder<double>(
       stream: _budgetStream,
       builder: (context, budgetSnapshot) {
         if (budgetSnapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(backgroundColor: AppColors.background, body: Center(child: CircularProgressIndicator(color: AppColors.primary)));
         }
-
-        final double totalBudget = budgetSnapshot.data ?? 0.00;
+        final double manualCapital = budgetSnapshot.data ?? 0.00;
 
         return StreamBuilder<List<Expense>>(
           stream: _expensesStream,
@@ -128,31 +188,28 @@ class _AddExpensePageState extends State<AddExpensePage> {
             }
 
             double totalSpent = 0.0;
+            double totalIncome = 0.0;
+            
             if (expenseSnapshot.hasData) {
-              final allExpenses = expenseSnapshot.data!;
-              totalSpent = allExpenses.fold(0.0, (sum, item) => sum + item.amount);
+              final all = expenseSnapshot.data!.where((e) => !e.isDeleted).toList();
+              totalIncome = all.where((e) => e.isIncome).fold(0.0, (sum, item) => sum + item.amount);
+              totalSpent = all.where((e) => !e.isIncome && !e.isCapital).fold(0.0, (sum, item) => sum + item.amount);
             }
-            final double availableBalance = totalBudget - totalSpent;
+            
+            final double cashOnHand = (manualCapital + totalIncome) - totalSpent;
 
             return Scaffold(
               backgroundColor: AppColors.background,
               body: Column(
                 children: [
+                  // Header
                   Container(
                     padding: const EdgeInsets.only(top: 50, left: 16, right: 16, bottom: 20),
                     decoration: const BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.vertical(bottom: Radius.circular(30))),
                     child: Row(
                       children: [
-                        InkWell(
-                          onTap: () => Navigator.pop(context), 
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.all(8), 
-                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)), 
-                            child: const Icon(Icons.arrow_back, color: Colors.white, size: 20)
-                          ),
-                        ),
-                        const Expanded(child: Center(child: Text("Add Expense", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600)))),
+                        InkWell(onTap: () => Navigator.pop(context), child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.arrow_back, color: Colors.white, size: 20))),
+                        const Expanded(child: Center(child: Text("Add Transaction", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600)))),
                         const SizedBox(width: 40),
                       ],
                     ),
@@ -164,14 +221,29 @@ class _AddExpensePageState extends State<AddExpensePage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          
+                          // Toggle Switch
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            margin: const EdgeInsets.only(bottom: 24),
+                            decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(16)),
+                            child: Row(
+                              children: [
+                                Expanded(child: _buildToggleOption("Expense", !isIncome, AppColors.expense)),
+                                Expanded(child: _buildToggleOption("Income (Sales)", isIncome, AppColors.success)),
+                              ],
+                            ),
+                          ),
+
+                          // Cash Display Card
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(16),
                             margin: const EdgeInsets.only(bottom: 24),
                             decoration: BoxDecoration(
-                              color: totalBudget <= 0 ? AppColors.expense.withOpacity(0.1) : AppColors.secondary,
+                              color: cashOnHand <= 0 ? AppColors.expense.withOpacity(0.1) : AppColors.secondary,
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: totalBudget <= 0 ? AppColors.expense : AppColors.primary.withOpacity(0.3)),
+                              border: Border.all(color: cashOnHand <= 0 ? AppColors.expense : AppColors.primary.withOpacity(0.3)),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -180,50 +252,70 @@ class _AddExpensePageState extends State<AddExpensePage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      totalBudget <= 0 ? "No Budget Set" : "Available Balance", 
-                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: totalBudget <= 0 ? AppColors.expense : AppColors.primary)
+                                      cashOnHand <= 0 ? "No Cash Available" : "Current Cash on Hand", 
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cashOnHand <= 0 ? AppColors.expense : AppColors.primary)
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      "₱${availableBalance.toStringAsFixed(2)}", 
-                                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: totalBudget <= 0 ? AppColors.expense : AppColors.textPrimary)
+                                      "₱${cashOnHand.toStringAsFixed(2)}", 
+                                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: cashOnHand <= 0 ? AppColors.expense : AppColors.textPrimary)
                                     ),
                                   ],
                                 ),
-                                if (totalBudget <= 0) 
-                                  ElevatedButton(
-                                    onPressed: () => Navigator.pop(context), 
-                                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.expense, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap), 
-                                    child: const Text("Set Budget", style: TextStyle(fontSize: 12))
-                                  ) 
-                                else 
-                                  Icon(Icons.account_balance_wallet, color: AppColors.primary.withOpacity(0.5), size: 32),
+                                Icon(Icons.account_balance_wallet, color: AppColors.primary.withOpacity(0.5), size: 32),
                               ],
                             ),
                           ),
 
-                          const FormLabel('Expense Name'),
-                          const SizedBox(height: 6),
+                          const FormLabel('Description'), 
+                          const SizedBox(height: 6), 
                           RoundedTextField(
                             controller: titleController, 
-                            hintText: 'e.g. Lunch at Mcdonalds',
-                            // 🔥 HCI: Jump to next field automatically
+                            // 🔥 FIX: isIncome is now defined
+                            hintText: isIncome ? 'e.g. Daily Product Sales' : 'e.g. Inventory Restock',
                             textInputAction: TextInputAction.next,
-                          ),
+                          ), 
                           const SizedBox(height: 16),
 
-                          const FormLabel('Amount'),
-                          const SizedBox(height: 6),
-                          RoundedTextField(
-                            controller: amountController,
-                            prefix: const Text('₱', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            hintText: '0.00',
-                            // 🔥 HCI: Show "Done" checkmark on keyboard
-                            textInputAction: TextInputAction.done,
-                            // 🔥 HCI: Submit form immediately when "Done" is pressed
-                            onFieldSubmitted: (_) => _saveExpense(availableBalance, totalBudget),
+                          // Unified Input Row
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const FormLabel('Price (per unit)'), 
+                                    const SizedBox(height: 6),
+                                    RoundedTextField(
+                                      controller: priceController, 
+                                      prefix: const Text('₱', style: TextStyle(fontWeight: FontWeight.w600)),
+                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      hintText: '0.00',
+                                      textInputAction: TextInputAction.next,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const FormLabel('Qty'), 
+                                    const SizedBox(height: 6),
+                                    RoundedTextField(
+                                      controller: qtyController, 
+                                      prefix: const Icon(Icons.numbers, size: 18),
+                                      keyboardType: TextInputType.number,
+                                      hintText: '1',
+                                      textInputAction: TextInputAction.done,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
+
                           const SizedBox(height: 16),
                           
                           const FormLabel('Category'), 
@@ -237,7 +329,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
                                 isExpanded: true, 
                                 icon: const Icon(Icons.keyboard_arrow_down_rounded), 
                                 borderRadius: BorderRadius.circular(14), 
-                                items: Expense.categories.map((String value) => DropdownMenuItem(value: value, child: Text(value))).toList(), 
+                                items: currentCategories.map((String value) => DropdownMenuItem(value: value, child: Text(value))).toList(), 
                                 onChanged: (newValue) => setState(() => selectedCategory = newValue!)
                               ),
                             ),
@@ -256,12 +348,12 @@ class _AddExpensePageState extends State<AddExpensePage> {
                           SizedBox(
                             width: double.infinity, 
                             child: ElevatedButton.icon(
-                              onPressed: isLoading ? null : () => _saveExpense(availableBalance, totalBudget), 
+                              onPressed: isLoading ? null : () => _saveTransaction(cashOnHand), 
                               icon: isLoading 
                                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
                                 : const Icon(Icons.check_circle_outline, color: Colors.white), 
                               label: Text(
-                                isLoading ? "Saving..." : "Save Expense", 
+                                isLoading ? "Saving..." : "Save Record", 
                                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)
                               ), 
                               style: ElevatedButton.styleFrom(
@@ -282,6 +374,33 @@ class _AddExpensePageState extends State<AddExpensePage> {
           }
         );
       }
+    );
+  }
+
+  Widget _buildToggleOption(String label, bool isSelected, Color activeColor) {
+    return GestureDetector(
+      onTap: () {
+        if (label == "Expense") _setType(TransactionType.expense);
+        if (label == "Income (Sales)") _setType(TransactionType.income);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: isSelected ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))] : [],
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isSelected ? activeColor : AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

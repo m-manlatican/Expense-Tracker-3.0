@@ -11,7 +11,12 @@ class Expense {
   final String notes;
   final int iconCodePoint; 
   final int iconColorValue; 
-  final bool isDeleted;
+  
+  // 🔥 NEW FIELDS
+  final bool isDeleted; // True = In History, False = Active
+  final bool isIncome;
+  final bool isCapital;
+  final int? quantity;
 
   Expense({
     required this.id,
@@ -23,51 +28,48 @@ class Expense {
     required this.notes,
     required this.iconCodePoint,
     required this.iconColorValue,
-    this.isDeleted = false, 
+    this.isDeleted = false, // Default to active
+    this.isIncome = false,
+    this.isCapital = false,
+    this.quantity,
   });
 
-  // 🔥 SRP: Single Source of Truth for Categories
-  static const List<String> categories = [
-    'Food', 
-    'Transport', 
-    'Shopping', 
-    'Bills', 
-    'Entertainment', 
-    'Health', 
-    'Software',  // Added
-    'Supplies',  // Added
-    'Meals',     // Added
-    'Travel',    // Added
-    'Other'
+  // CATEGORY LISTS
+  static const List<String> expenseCategories = [
+    'Inventory', 'Rent', 'Utilities', 'Labor', 'Marketing', 'Equipment', 'Tax', 'Other'
+  ];
+  
+  static const List<String> incomeCategories = [
+    'Product Sales', 'Service Fee', 'Other Income'
   ];
 
-  // 🔥 SRP: Centralized Icon/Color Logic
+  static const List<String> capitalCategories = [
+    'Initial Capital', 'Additional Investment', 'Loan', 'Grant'
+  ];
+
   static Map<String, dynamic> getCategoryDetails(String category) {
     switch (category) {
-      case 'Food': 
-        return {'icon': Icons.fastfood, 'color': const Color(0xFFFF9F0A)}; 
-      case 'Transport': 
-        return {'icon': Icons.directions_car, 'color': const Color(0xFF0A84FF)}; 
-      case 'Shopping': 
-        return {'icon': Icons.shopping_bag, 'color': const Color(0xFFBF5AF2)}; 
-      case 'Bills': 
-        return {'icon': Icons.receipt_long, 'color': const Color(0xFFFF375F)}; 
-      case 'Entertainment': 
-        return {'icon': Icons.movie, 'color': const Color(0xFF5E5CE6)}; 
-      case 'Health': 
-        return {'icon': Icons.medical_services, 'color': const Color(0xFF32D74B)};
-      // 🔥 New Categories
-      case 'Software': 
-        return {'icon': Icons.computer, 'color': const Color(0xFF4E6AFF)}; 
-      case 'Supplies': 
-        return {'icon': Icons.inventory_2, 'color': const Color(0xFF795548)}; 
-      case 'Meals': 
-        return {'icon': Icons.restaurant, 'color': const Color(0xFFFF5722)}; 
-      case 'Travel': 
-        return {'icon': Icons.flight, 'color': const Color(0xFF00BCD4)}; 
-      case 'Other':
-      default: 
-        return {'icon': Icons.grid_view, 'color': const Color(0xFF8E8E93)}; 
+      // Expenses
+      case 'Inventory': return {'icon': Icons.inventory_2, 'color': const Color(0xFFE76F51)}; 
+      case 'Rent': return {'icon': Icons.store, 'color': const Color(0xFF264653)}; 
+      case 'Utilities': return {'icon': Icons.bolt, 'color': const Color(0xFFE9C46A)}; 
+      case 'Labor': return {'icon': Icons.group, 'color': const Color(0xFFF4A261)}; 
+      case 'Marketing': return {'icon': Icons.campaign, 'color': const Color(0xFF8D99AE)}; 
+      case 'Equipment': return {'icon': Icons.build, 'color': const Color(0xFF607D8B)};
+      case 'Tax': return {'icon': Icons.account_balance, 'color': const Color(0xFF9E9E9E)};
+      
+      // Income
+      case 'Product Sales': return {'icon': Icons.point_of_sale, 'color': const Color(0xFF2A9D8F)}; 
+      case 'Service Fee': return {'icon': Icons.handyman, 'color': const Color(0xFF2A9D8F)}; 
+      case 'Other Income': return {'icon': Icons.attach_money, 'color': const Color(0xFF2A9D8F)};
+
+      // Capital
+      case 'Initial Capital': return {'icon': Icons.savings, 'color': const Color(0xFF4E6AFF)}; 
+      case 'Additional Investment': return {'icon': Icons.add_card, 'color': const Color(0xFF4E6AFF)};
+      case 'Loan': return {'icon': Icons.credit_score, 'color': const Color(0xFF3F51B5)};
+      case 'Grant': return {'icon': Icons.card_giftcard, 'color': const Color(0xFF673AB7)};
+      
+      default: return {'icon': Icons.grid_view, 'color': const Color(0xFF8E8E93)}; 
     }
   }
 
@@ -82,6 +84,9 @@ class Expense {
       'iconCodePoint': iconCodePoint,
       'iconColorValue': iconColorValue,
       'isDeleted': isDeleted,
+      'isIncome': isIncome,
+      'isCapital': isCapital,
+      'quantity': quantity,
     };
   }
 
@@ -96,7 +101,10 @@ class Expense {
       notes: map['notes'] ?? '',
       iconCodePoint: map['iconCodePoint'] ?? Icons.error.codePoint,
       iconColorValue: map['iconColorValue'] ?? 0xFF000000,
-      isDeleted: map['isDeleted'] ?? false, 
+      isDeleted: map['isDeleted'] ?? false,
+      isIncome: map['isIncome'] ?? false,
+      isCapital: map['isCapital'] ?? false,
+      quantity: map['quantity'] as int?,
     );
   }
 

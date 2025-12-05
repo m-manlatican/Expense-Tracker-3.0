@@ -5,9 +5,16 @@ import 'package:expense_tracker_3_0/widgets/simple_pie_chart.dart';
 import 'package:flutter/material.dart';
 
 class CategoryBreakdownCard extends StatelessWidget {
+  final String title;
   final List<Expense> expenses;
+  final bool isIncome;
 
-  const CategoryBreakdownCard({super.key, required this.expenses});
+  const CategoryBreakdownCard({
+    super.key,
+    required this.title,
+    required this.expenses,
+    required this.isIncome,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +26,7 @@ class CategoryBreakdownCard extends StatelessWidget {
       categoryColors[e.category] = e.iconColor;
     }
 
-    final totalSpent = expenses.fold(0.0, (sum, item) => sum + item.amount);
+    final totalAmount = expenses.fold(0.0, (sum, item) => sum + item.amount);
     
     final List<MapEntry<String, double>> sortedCategories = categoryTotals.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -36,9 +43,9 @@ class CategoryBreakdownCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Spending by Category",
-            style: TextStyle(
+          Text(
+            title,
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: AppColors.textPrimary,
@@ -46,7 +53,7 @@ class CategoryBreakdownCard extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           
-          if (totalSpent > 0)
+          if (totalAmount > 0)
             Center(
               child: SimplePieChart(
                 data: pieData,
@@ -62,8 +69,7 @@ class CategoryBreakdownCard extends StatelessWidget {
             final categoryName = entry.key;
             final amount = entry.value;
             final color = categoryColors[categoryName] ?? Colors.grey;
-            final percentage = totalSpent > 0 ? (amount / totalSpent) : 0.0;
-            // 🔥 NEW: Format percentage string
+            final percentage = totalAmount > 0 ? (amount / totalAmount) : 0.0;
             final percentString = (percentage * 100).toStringAsFixed(1);
 
             return Padding(
@@ -80,7 +86,6 @@ class CategoryBreakdownCard extends StatelessWidget {
                             backgroundColor: color,
                           ),
                           const SizedBox(width: 8),
-                          // 🔥 UPDATED: Show Name + Percentage
                           RichText(
                             text: TextSpan(
                               children: [

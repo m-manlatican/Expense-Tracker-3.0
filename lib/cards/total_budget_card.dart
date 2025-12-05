@@ -48,7 +48,7 @@ class _TotalBudgetCardState extends State<TotalBudgetCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 const Text(
-                  'Edit Total Budget', 
+                  'Update Capital', // Renamed for Business Context
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -64,15 +64,11 @@ class _TotalBudgetCardState extends State<TotalBudgetCard> {
                   ],
                   style: const TextStyle(fontSize: 18),
                   decoration: InputDecoration(
-                    labelText: 'Total Amount',
-                    prefixText: '₱ ', // 🔥 CHANGED TO PESO
+                    labelText: 'Capital Amount',
+                    prefixText: '₱ ',
                     labelStyle: const TextStyle(color: AppColors.textSecondary),
                     prefixStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: const BorderSide(color: AppColors.primary, width: 2.0),
@@ -100,7 +96,7 @@ class _TotalBudgetCardState extends State<TotalBudgetCard> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       elevation: 0,
                     ),
-                    child: const Text('Save Changes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    child: const Text('Save Capital', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   ),
                 ),
               ],
@@ -138,7 +134,7 @@ class _TotalBudgetCardState extends State<TotalBudgetCard> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
-              Icons.account_balance_wallet_outlined,
+              Icons.savings, // Changed icon to represent Capital/Savings
               color: AppColors.primary,
               size: 22,
             ),
@@ -150,7 +146,7 @@ class _TotalBudgetCardState extends State<TotalBudgetCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Total Budget', 
+                  'Initial Capital', 
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary,
@@ -159,7 +155,7 @@ class _TotalBudgetCardState extends State<TotalBudgetCard> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '₱${widget.currentBudget.toStringAsFixed(2)}', // 🔥 CHANGED TO PESO
+                  '₱${widget.currentBudget.toStringAsFixed(2)}', 
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -170,11 +166,12 @@ class _TotalBudgetCardState extends State<TotalBudgetCard> {
             ),
           ),
 
+          // 🔥 RESTORED: Edit Button
           IconButton(
             icon: const Icon(Icons.edit),
             color: AppColors.primary,
             onPressed: _showEditBudgetModal,
-            tooltip: 'Edit Total Budget',
+            tooltip: 'Edit Capital',
           ),
         ],
       ),
