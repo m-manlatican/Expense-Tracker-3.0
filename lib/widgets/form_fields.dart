@@ -27,9 +27,12 @@ class RoundedTextField extends StatelessWidget {
   final int maxLines;
   final TextEditingController? controller;
   final bool obscureText;
-  // 🔥 NEW: Error support
   final String? errorText;
   final ValueChanged<String>? onChanged;
+  
+  // 🔥 NEW: Keyboard Interaction Properties
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onFieldSubmitted;
 
   const RoundedTextField({
     super.key,
@@ -43,6 +46,8 @@ class RoundedTextField extends StatelessWidget {
     this.obscureText = false,
     this.errorText,
     this.onChanged,
+    this.textInputAction, // 🔥 Added
+    this.onFieldSubmitted, // 🔥 Added
   });
 
   @override
@@ -56,7 +61,11 @@ class RoundedTextField extends StatelessWidget {
           keyboardType: keyboardType,
           maxLines: maxLines,
           obscureText: obscureText,
-          onChanged: onChanged, // Trigger cleanup when typing
+          onChanged: onChanged,
+          // 🔥 NEW: Apply keyboard actions
+          textInputAction: textInputAction,
+          onSubmitted: onFieldSubmitted,
+          
           style: const TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
             filled: true,
@@ -69,7 +78,6 @@ class RoundedTextField extends StatelessWidget {
                     padding: const EdgeInsets.only(left: 14, right: 8),
                     child: IconTheme(
                       data: IconThemeData(
-                        // Turn icon red if there is an error
                         color: errorText != null ? AppColors.expense : AppColors.textPrimary
                       ), 
                       child: prefix!
@@ -81,7 +89,6 @@ class RoundedTextField extends StatelessWidget {
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             
-            // 🔥 NATIVE ERROR DISPLAY
             errorText: errorText, 
             errorStyle: const TextStyle(
               color: AppColors.expense, 
@@ -97,7 +104,6 @@ class RoundedTextField extends StatelessWidget {
               borderSide: BorderSide(color: AppColors.expense, width: 2),
             ),
             
-            // Standard Borders
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(color: Colors.grey.shade200, width: 1),

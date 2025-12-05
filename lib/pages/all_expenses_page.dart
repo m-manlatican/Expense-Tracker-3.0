@@ -1,10 +1,11 @@
 import 'package:expense_tracker_3_0/app_colors.dart';
 import 'package:expense_tracker_3_0/cards/all_expenses_listview.dart';
 import 'package:expense_tracker_3_0/models/all_expense_model.dart';
-import 'package:expense_tracker_3_0/pages/expense_history_page.dart'; // Import History Page
+import 'package:expense_tracker_3_0/pages/expense_history_page.dart';
 import 'package:expense_tracker_3_0/services/firestore_service.dart';
 import 'package:expense_tracker_3_0/widgets/expense_filter_modal.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AllExpensesPage extends StatefulWidget {
   final VoidCallback? onBackTap;
@@ -20,12 +21,71 @@ class AllExpensesPageState extends State<AllExpensesPage> {
   SortOption _currentSort = SortOption.newest;
   final List<String> _allCategories = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Other'];
 
+  @override
+  void initState() {
+    super.initState();
+    _checkAndShowSwipeHint();
+  }
+
+  Future<void> _checkAndShowSwipeHint() async {
+    try {
+      // 🔥 FIX: Wrapped in try-catch to prevent app crash if plugin isn't ready
+      final prefs = await SharedPreferences.getInstance();
+      
+      final bool hasDismissedHint = prefs.getBool('dismissed_swipe_hint') ?? false;
+      if (hasDismissedHint) return;
+
+      await Future.delayed(const Duration(seconds: 1));
+      if (!mounted) return;
+
+      _showSwipeHint(prefs);
+    } catch (e) {
+      debugPrint("Shared Preferences Error: $e");
+      // App continues working even if this fails
+    }
+  }
+
+  void _showSwipeHint(SharedPreferences prefs) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.swipe_right, color: AppColors.primary),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                "Tip: Swipe right on an item to delete it.",
+                style: TextStyle(
+                  color: AppColors.textPrimary, 
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.secondary, 
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 6), 
+        action: SnackBarAction(
+          label: "Don't show again",
+          textColor: AppColors.primary,
+          onPressed: () async {
+            await prefs.setBool('dismissed_swipe_hint', true);
+            if (mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
+        ),
+      ),
+    );
+  }
+
   void _editExpense(Expense expense) async {
     await Navigator.pushNamed(context, '/edit_expense', arguments: expense);
   }
 
   void _deleteExpense(Expense expense) async {
-    // Soft delete (moves to history)
     await _firestoreService.deleteExpense(expense.id);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -34,6 +94,14 @@ class AllExpensesPageState extends State<AllExpensesPage> {
         backgroundColor: AppColors.textPrimary,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        action: SnackBarAction(
+          label: "Undo",
+          textColor: AppColors.secondary,
+          onPressed: () async {
+            await _firestoreService.restoreExpense(expense.id);
+          },
+        ),
       ),
     );
   }
@@ -86,7 +154,6 @@ class AllExpensesPageState extends State<AllExpensesPage> {
                 
                 Row(
                   children: [
-                    // 🔥 NEW: History Button
                     InkWell(
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ExpenseHistoryPage())),
                       borderRadius: BorderRadius.circular(12),
@@ -97,7 +164,6 @@ class AllExpensesPageState extends State<AllExpensesPage> {
                         child: const Icon(Icons.history, color: Colors.white, size: 20),
                       ),
                     ),
-                    // Filter Button
                     InkWell(
                       onTap: _openFilterModal,
                       borderRadius: BorderRadius.circular(12),
@@ -133,15 +199,12 @@ class AllExpensesPageState extends State<AllExpensesPage> {
                     return const Center(child: Text('No expenses yet.'));
                   }
 
-                  // 🔥 FILTER: Only show active expenses
                   List<Expense> expenses = snapshot.data!.where((e) => !e.isDeleted).toList();
 
-                  // Apply Category Filter
                   if (_selectedCategories.isNotEmpty) {
                     expenses = expenses.where((e) => _selectedCategories.contains(e.category)).toList();
                   }
 
-                  // Apply Sort
                   expenses.sort((a, b) {
                     switch (_currentSort) {
                       case SortOption.newest: return b.date.compareTo(a.date);
@@ -158,10 +221,19 @@ class AllExpensesPageState extends State<AllExpensesPage> {
                         const Icon(Icons.search_off, size: 48, color: Colors.grey),
                         const SizedBox(height: 10),
                         const Text('No active expenses found.'),
+                        if (_selectedCategories.isNotEmpty)
+                          TextButton(
+                            onPressed: () => setState(() { _selectedCategories.clear(); _currentSort = SortOption.newest; }),
+                            child: const Text('Clear Filters', style: TextStyle(color: AppColors.primary)),
+                          )
                       ],
                     );
                   }
-                  return AllExpensesListView(expenses: expenses, onEdit: _editExpense, onDelete: _deleteExpense);
+                  return AllExpensesListView(
+                    expenses: expenses, 
+                    onEdit: _editExpense, 
+                    onDelete: _deleteExpense
+                  );
                 },
               ),
             ),

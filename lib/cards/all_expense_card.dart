@@ -5,13 +5,11 @@ import 'package:flutter/material.dart';
 class ExpenseCard extends StatelessWidget {
   final Expense expense;
   final VoidCallback onEdit;
-  final VoidCallback onDelete;
 
   const ExpenseCard({
     super.key,
     required this.expense,
     required this.onEdit,
-    required this.onDelete,
   });
 
   @override
@@ -62,7 +60,7 @@ class ExpenseCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '₱${expense.amount.toStringAsFixed(2)}', // 🔥 CHANGED TO PESO
+                    '₱${expense.amount.toStringAsFixed(2)}', 
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 16,
@@ -105,6 +103,7 @@ class ExpenseCard extends StatelessWidget {
               ),
             ),
           const SizedBox(height: 12),
+          // 🔥 Only Edit Button remains
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -120,20 +119,6 @@ class ExpenseCard extends StatelessWidget {
                 icon: const Icon(Icons.edit, size: 16),
                 label: const Text('Edit', style: TextStyle(fontWeight: FontWeight.w600)),
                 onPressed: onEdit,
-              ),
-              const SizedBox(width: 10),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: AppColors.expense,
-                  backgroundColor: AppColors.expense.withOpacity(0.1),
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  minimumSize: Size.zero,
-                ),
-                icon: const Icon(Icons.delete, size: 16),
-                label: const Text('Delete', style: TextStyle(fontWeight: FontWeight.w600)),
-                onPressed: onDelete,
               ),
             ],
           ),

@@ -10,6 +10,7 @@ import 'package:expense_tracker_3_0/services/auth_service.dart';
 import 'package:expense_tracker_3_0/services/firestore_service.dart';
 import 'package:expense_tracker_3_0/widgets/head_clipper.dart';
 import 'package:expense_tracker_3_0/widgets/header_title.dart';
+import 'package:expense_tracker_3_0/widgets/skeleton_loader.dart'; // 🔥 Import Skeleton
 import 'package:flutter/material.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -41,7 +42,6 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _onItemTapped(int index) => setState(() => _selectedIndex = index);
-
   void _updateBudget(double newBudget) => _firestoreService.updateUserBudget(newBudget);
 
   Future<void> _signOut() async {
@@ -64,18 +64,40 @@ class _DashboardPageState extends State<DashboardPage> {
     if (confirm == true) await _authService.signOut();
   }
 
+  // 🔥 NEW: Reusable Skeleton Layout for Loading State
+  Widget _buildLoadingDashboard() {
+    return SafeArea(
+      child: Stack(
+        children: [
+          Positioned.fill(child: Align(alignment: Alignment.topCenter, child: ClipPath(clipper: HeaderClipper(), child: Container(height: 260, color: AppColors.primary)))),
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                const SizedBox(height: 60), // Space for header
+                const SkeletonLoader(height: 80, width: double.infinity), // Budget Card Placeholder
+                const SizedBox(height: 12),
+                const SkeletonLoader(height: 120, width: double.infinity), // Spent Card Placeholder
+                const SizedBox(height: 12),
+                const SkeletonLoader(height: 80, width: double.infinity), // Available Card Placeholder
+                const SizedBox(height: 16),
+                const SkeletonLoader(height: 200, width: double.infinity), // Chart Placeholder
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<double>(
       stream: _firestoreService.getUserBudgetStream(),
       builder: (context, budgetSnapshot) {
-        
-        // 🔥 FIX 1: Loading State for Budget
+        // 🔥 USE SKELETON LOADER INSTEAD OF SPINNER
         if (budgetSnapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: AppColors.background,
-            body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
-          );
+          return Scaffold(backgroundColor: AppColors.background, body: _buildLoadingDashboard());
         }
 
         final double currentBudget = budgetSnapshot.data ?? 0.00;
@@ -83,21 +105,17 @@ class _DashboardPageState extends State<DashboardPage> {
         final dashboardTab = StreamBuilder<List<Expense>>(
           stream: _firestoreService.getExpensesStream(),
           builder: (context, expenseSnapshot) {
-            
-            // 🔥 FIX 2: Loading State for Expenses
+            // 🔥 USE SKELETON LOADER HERE TOO
             if (expenseSnapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+              return _buildLoadingDashboard();
             }
-
             double totalSpent = 0.0;
             List<double> chartValues = List.filled(7, 0.0);
             List<String> chartDates = List.filled(7, '-');
 
             if (expenseSnapshot.hasData) {
               final expenses = expenseSnapshot.data!; 
-              // 🔥 LOGIC RESTORED: Uses ALL expenses (even deleted ones) for Total Spent
               totalSpent = expenses.fold(0.0, (sum, item) => sum + item.amount);
-              
               final chartData = _getChartData(expenses);
               chartValues = chartData['values'];
               chartDates = chartData['dates'];

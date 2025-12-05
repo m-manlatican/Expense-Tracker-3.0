@@ -30,7 +30,6 @@ class _AddExpensePageState extends State<AddExpensePage> {
     _budgetStream = _firestoreService.getUserBudgetStream();
     _expensesStream = _firestoreService.getExpensesStream();
     
-    // Ensure default selection is valid
     if (!Expense.categories.contains(selectedCategory)) {
       selectedCategory = Expense.categories.first;
     }
@@ -60,21 +59,25 @@ class _AddExpensePageState extends State<AddExpensePage> {
     try {
       setState(() => isLoading = true);
       final now = DateTime.now(); 
-      
-      // 🔥 USE SHARED HELPER
       final categoryDetails = Expense.getCategoryDetails(selectedCategory);
       
       final newExpense = Expense(
-        id: '', title: title, category: selectedCategory, amount: amount,
+        id: '', 
+        title: title, 
+        category: selectedCategory, 
+        amount: amount,
         dateLabel: "${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}/${now.year}",
-        date: Timestamp.now(), notes: notesController.text.trim(),
+        date: Timestamp.now(), 
+        notes: notesController.text.trim(),
         iconCodePoint: (categoryDetails['icon'] as IconData).codePoint, 
         iconColorValue: (categoryDetails['color'] as Color).value,
       );
       
       await _firestoreService.addExpense(newExpense);
+      
       if (!mounted) return;
       Navigator.pop(context); 
+      
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
@@ -92,8 +95,14 @@ class _AddExpensePageState extends State<AddExpensePage> {
         content: Text(message, style: const TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(
-            onPressed: () { Navigator.pop(ctx); if (title == "No Budget Set") Navigator.pop(context); },
-            child: Text(title == "No Budget Set" ? "Go to Dashboard" : "Okay", style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+            onPressed: () { 
+              Navigator.pop(ctx); 
+              if (title == "No Budget Set") Navigator.pop(context); 
+            },
+            child: Text(
+              title == "No Budget Set" ? "Go to Dashboard" : "Okay", 
+              style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+            ),
           )
         ],
       ),
@@ -134,12 +143,21 @@ class _AddExpensePageState extends State<AddExpensePage> {
                     decoration: const BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.vertical(bottom: Radius.circular(30))),
                     child: Row(
                       children: [
-                        InkWell(onTap: () => Navigator.pop(context), child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.arrow_back, color: Colors.white, size: 20))),
+                        InkWell(
+                          onTap: () => Navigator.pop(context), 
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.all(8), 
+                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)), 
+                            child: const Icon(Icons.arrow_back, color: Colors.white, size: 20)
+                          ),
+                        ),
                         const Expanded(child: Center(child: Text("Add Expense", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600)))),
                         const SizedBox(width: 40),
                       ],
                     ),
                   ),
+                  
                   Expanded(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -161,18 +179,55 @@ class _AddExpensePageState extends State<AddExpensePage> {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(totalBudget <= 0 ? "No Budget Set" : "Available Balance", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: totalBudget <= 0 ? AppColors.expense : AppColors.primary)),
+                                    Text(
+                                      totalBudget <= 0 ? "No Budget Set" : "Available Balance", 
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: totalBudget <= 0 ? AppColors.expense : AppColors.primary)
+                                    ),
                                     const SizedBox(height: 4),
-                                    Text("₱${availableBalance.toStringAsFixed(2)}", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: totalBudget <= 0 ? AppColors.expense : AppColors.textPrimary)),
+                                    Text(
+                                      "₱${availableBalance.toStringAsFixed(2)}", 
+                                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: totalBudget <= 0 ? AppColors.expense : AppColors.textPrimary)
+                                    ),
                                   ],
                                 ),
-                                if (totalBudget <= 0) ElevatedButton(onPressed: () => Navigator.pop(context), style: ElevatedButton.styleFrom(backgroundColor: AppColors.expense, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap), child: const Text("Set Budget", style: TextStyle(fontSize: 12))) else Icon(Icons.account_balance_wallet, color: AppColors.primary.withOpacity(0.5), size: 32),
+                                if (totalBudget <= 0) 
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.pop(context), 
+                                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.expense, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap), 
+                                    child: const Text("Set Budget", style: TextStyle(fontSize: 12))
+                                  ) 
+                                else 
+                                  Icon(Icons.account_balance_wallet, color: AppColors.primary.withOpacity(0.5), size: 32),
                               ],
                             ),
                           ),
-                          const FormLabel('Expense Name'), const SizedBox(height: 6), RoundedTextField(controller: titleController, hintText: 'e.g. Lunch at Mcdonalds'), const SizedBox(height: 16),
-                          const FormLabel('Amount'), const SizedBox(height: 6), RoundedTextField(controller: amountController, prefix: const Text('₱', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)), keyboardType: const TextInputType.numberWithOptions(decimal: true), hintText: '0.00'), const SizedBox(height: 16),
-                          const FormLabel('Category'), const SizedBox(height: 6),
+
+                          const FormLabel('Expense Name'),
+                          const SizedBox(height: 6),
+                          RoundedTextField(
+                            controller: titleController, 
+                            hintText: 'e.g. Lunch at Mcdonalds',
+                            // 🔥 HCI: Jump to next field automatically
+                            textInputAction: TextInputAction.next,
+                          ),
+                          const SizedBox(height: 16),
+
+                          const FormLabel('Amount'),
+                          const SizedBox(height: 6),
+                          RoundedTextField(
+                            controller: amountController,
+                            prefix: const Text('₱', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            hintText: '0.00',
+                            // 🔥 HCI: Show "Done" checkmark on keyboard
+                            textInputAction: TextInputAction.done,
+                            // 🔥 HCI: Submit form immediately when "Done" is pressed
+                            onFieldSubmitted: (_) => _saveExpense(availableBalance, totalBudget),
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          const FormLabel('Category'), 
+                          const SizedBox(height: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16), 
                             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.grey.shade200)), 
@@ -182,15 +237,41 @@ class _AddExpensePageState extends State<AddExpensePage> {
                                 isExpanded: true, 
                                 icon: const Icon(Icons.keyboard_arrow_down_rounded), 
                                 borderRadius: BorderRadius.circular(14), 
-                                // 🔥 USE SHARED CATEGORIES
                                 items: Expense.categories.map((String value) => DropdownMenuItem(value: value, child: Text(value))).toList(), 
                                 onChanged: (newValue) => setState(() => selectedCategory = newValue!)
                               ),
                             ),
                           ), 
                           const SizedBox(height: 16),
-                          const FormLabel('Notes (Optional)'), const SizedBox(height: 6), RoundedTextField(controller: notesController, hintText: 'Add details...', maxLines: 3), const SizedBox(height: 24),
-                          SizedBox(width: double.infinity, child: ElevatedButton.icon(onPressed: isLoading ? null : () => _saveExpense(availableBalance, totalBudget), icon: isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.check_circle_outline, color: Colors.white), label: Text(isLoading ? "Saving..." : "Save Expense", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)), style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), elevation: 4))),
+                          
+                          const FormLabel('Notes (Optional)'), 
+                          const SizedBox(height: 6), 
+                          RoundedTextField(
+                            controller: notesController, 
+                            hintText: 'Add details...', 
+                            maxLines: 3
+                          ), 
+                          const SizedBox(height: 24),
+                          
+                          SizedBox(
+                            width: double.infinity, 
+                            child: ElevatedButton.icon(
+                              onPressed: isLoading ? null : () => _saveExpense(availableBalance, totalBudget), 
+                              icon: isLoading 
+                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
+                                : const Icon(Icons.check_circle_outline, color: Colors.white), 
+                              label: Text(
+                                isLoading ? "Saving..." : "Save Expense", 
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)
+                              ), 
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary, 
+                                padding: const EdgeInsets.symmetric(vertical: 15), 
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), 
+                                elevation: 4
+                              )
+                            )
+                          ),
                         ],
                       ),
                     ),

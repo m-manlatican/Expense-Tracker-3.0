@@ -76,8 +76,9 @@ class _LoginPageState extends State<LoginPage> {
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       setState(() {
-        if (e.code == 'user-not-found') _emailError = "Incorrect email.";
-        else if (e.code == 'wrong-password') _passwordError = "Incorrect password.";
+        if (e.code == 'user-not-found') {
+          _emailError = "Incorrect email.";
+        } else if (e.code == 'wrong-password') _passwordError = "Incorrect password.";
         else if (e.code == 'invalid-credential') { _emailError = "Incorrect email or password."; _passwordError = " "; }
         else if (e.code == 'user-disabled') _emailError = "This account has been disabled.";
         else if (e.code == 'invalid-email') _emailError = "Invalid email format.";
