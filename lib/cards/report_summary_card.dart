@@ -31,7 +31,7 @@ class ReportSummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           
-          // Net Profit (Main Metric)
+          // Net Profit (Hero Metric)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -67,7 +67,7 @@ class ReportSummaryCard extends StatelessWidget {
           
           const SizedBox(height: 20),
           
-          // Income vs Expense Row
+          // Income vs Expenses Row
           Row(
             children: [
               Expanded(

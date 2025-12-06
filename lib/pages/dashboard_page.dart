@@ -23,7 +23,6 @@ class _DashboardPageState extends State<DashboardPage> {
   final FirestoreService _firestoreService = FirestoreService();
   final AuthService _authService = AuthService();
 
-  // Streams
   late Stream<List<Expense>> _expensesStream;
   late Stream<double> _budgetStream;
 
@@ -34,7 +33,6 @@ class _DashboardPageState extends State<DashboardPage> {
     _budgetStream = _firestoreService.getUserBudgetStream();
   }
 
-  // Calculate chart data (Expenses Only)
   Map<String, dynamic> _getChartData(List<Expense> expenses) {
     List<double> values = [];
     List<String> dates = [];
@@ -44,7 +42,8 @@ class _DashboardPageState extends State<DashboardPage> {
       
       double dailySum = expenses.where((e) {
         DateTime eDate = e.date.toDate();
-        return eDate.year == target.year && 
+        return e.isIncome && 
+               eDate.year == target.year && 
                eDate.month == target.month && 
                eDate.day == target.day;
       }).fold(0.0, (sum, item) => sum + item.amount);
@@ -82,7 +81,6 @@ class _DashboardPageState extends State<DashboardPage> {
     if (confirm == true) await _authService.signOut();
   }
 
-  // Skeleton Loading
   Widget _buildLoadingDashboard() {
     return SafeArea(
       child: Stack(
@@ -127,60 +125,34 @@ class _DashboardPageState extends State<DashboardPage> {
     return StreamBuilder<double>(
       stream: _budgetStream,
       builder: (context, budgetSnapshot) {
-        
-        // Wait for Capital
         if (budgetSnapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(backgroundColor: AppColors.background, body: _buildLoadingDashboard());
         }
-
         final double currentCapital = budgetSnapshot.data ?? 0.00;
 
-        // 🔥 DEFINING THE DASHBOARD TAB WIDGET (With Data)
         final dashboardTab = StreamBuilder<List<Expense>>(
           stream: _expensesStream,
           builder: (context, expenseSnapshot) {
-            
             if (expenseSnapshot.connectionState == ConnectionState.waiting) {
               return _buildLoadingDashboard();
             }
 
             double totalExpenses = 0.0;
             double totalIncome = 0.0;
-            
-            // Pending amounts
             double pendingIncome = 0.0;
             double pendingExpense = 0.0;
-
             List<double> chartValues = List.filled(7, 0.0);
             List<String> chartDates = List.filled(7, '-');
 
             if (expenseSnapshot.hasData) {
               final allTransactions = expenseSnapshot.data!.where((e) => !e.isDeleted).toList();
               
-              // 🔥 BUSINESS MATH:
-
-              // 1. Income (Sales) - Only Paid
-              totalIncome = allTransactions
-                  .where((e) => e.isIncome && e.isPaid)
-                  .fold(0.0, (sum, item) => sum + item.amount);
+              totalIncome = allTransactions.where((e) => e.isIncome && e.isPaid).fold(0.0, (sum, item) => sum + item.amount);
+              totalExpenses = allTransactions.where((e) => !e.isIncome && !e.isCapital && e.isPaid).fold(0.0, (sum, item) => sum + item.amount);
+              pendingIncome = allTransactions.where((e) => e.isIncome && !e.isPaid).fold(0.0, (sum, item) => sum + item.amount);
+              pendingExpense = allTransactions.where((e) => !e.isIncome && !e.isCapital && !e.isPaid).fold(0.0, (sum, item) => sum + item.amount);
               
-              // 2. Expenses - Only Paid
-              totalExpenses = allTransactions
-                  .where((e) => !e.isIncome && !e.isCapital && e.isPaid)
-                  .fold(0.0, (sum, item) => sum + item.amount);
-
-              // 3. Pending
-              pendingIncome = allTransactions
-                  .where((e) => e.isIncome && !e.isPaid)
-                  .fold(0.0, (sum, item) => sum + item.amount);
-
-              pendingExpense = allTransactions
-                  .where((e) => !e.isIncome && !e.isCapital && !e.isPaid)
-                  .fold(0.0, (sum, item) => sum + item.amount);
-              
-              // Chart data (Expenses trend)
-              final expenseTransactions = allTransactions.where((e) => !e.isIncome && !e.isCapital).toList();
-              final chartData = _getChartData(expenseTransactions);
+              final chartData = _getChartData(allTransactions);
               chartValues = chartData['values'];
               chartDates = chartData['dates'];
             }
@@ -199,11 +171,10 @@ class _DashboardPageState extends State<DashboardPage> {
           },
         );
 
-        // 🔥 LIST OF PAGES: NO PLACEHOLDERS
         final List<Widget> pages = [
-          dashboardTab, // 0: Actual Dashboard
-          AllExpensesPage(onBackTap: () => _onItemTapped(0)), // 1: Records
-          ReportsPage(onBackTap: () => _onItemTapped(0)), // 2: Reports
+          dashboardTab, 
+          AllExpensesPage(onBackTap: () => _onItemTapped(0)), 
+          ReportsPage(onBackTap: () => _onItemTapped(0)), 
         ];
 
         return Scaffold(
@@ -262,7 +233,6 @@ class _DashboardContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Cash on Hand = Capital + Sales - Expenses
     final double cashOnHand = (manualCapital + totalIncome) - totalExpenses;
     final double netProfit = totalIncome - totalExpenses;
 
@@ -271,14 +241,13 @@ class _DashboardContent extends StatelessWidget {
         children: [
           Positioned.fill(
             child: Align(
-              alignment: Alignment.topCenter,
+              alignment: Alignment.topCenter, 
               child: ClipPath(
-                clipper: HeaderClipper(),
-                child: Container(height: 260, color: AppColors.primary),
-              ),
-            ),
+                clipper: HeaderClipper(), 
+                child: Container(height: 260, color: AppColors.primary)
+              )
+            )
           ),
-
           SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Column(
@@ -286,15 +255,12 @@ class _DashboardContent extends StatelessWidget {
                 HeaderTitle(onSignOut: onSignOut), 
                 const SizedBox(height: 20),
                 
-                // 1. CAPITAL
-                TotalBudgetCard(
-                  currentBudget: manualCapital, 
-                  onBudgetChanged: onUpdateCapital,
-                ),
+                // 1. CAPITAL (Full Width)
+                TotalBudgetCard(currentBudget: manualCapital, onBudgetChanged: onUpdateCapital),
 
                 const SizedBox(height: 12),
                 
-                // 2. PROFIT & SALES
+                // 2. NET PROFIT & TOTAL SALES
                 Row(
                   children: [
                     Expanded(
@@ -309,51 +275,31 @@ class _DashboardContent extends StatelessWidget {
 
                 const SizedBox(height: 12),
                 
-                // 3. EXPENSES
+                // 3. EXPENSES (Full Width)
                 _buildStatCard("Total Expenses", totalExpenses, AppColors.expense, fullWidth: true),
                 
                 const SizedBox(height: 12),
 
-                // 4. PENDING / ACCOUNTS (Conditional)
+                // 4. PENDING ACCOUNTS
                 if (pendingIncome > 0 || pendingExpense > 0) ...[
-                  Row(
-                    children: [
-                      if (pendingIncome > 0) 
-                        Expanded(child: _buildStatCard("To Collect", pendingIncome, Colors.orange)),
-                      if (pendingIncome > 0 && pendingExpense > 0) 
-                        const SizedBox(width: 12),
-                      if (pendingExpense > 0)
-                        Expanded(child: _buildStatCard("To Pay", pendingExpense, Colors.redAccent)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
+                   Row(children: [
+                      if (pendingIncome > 0) Expanded(child: _buildStatCard("To Collect", pendingIncome, Colors.orange, isSmall: true)),
+                      if (pendingIncome > 0 && pendingExpense > 0) const SizedBox(width: 12),
+                      if (pendingExpense > 0) Expanded(child: _buildStatCard("To Pay", pendingExpense, Colors.redAccent, isSmall: true)),
+                   ]),
+                   const SizedBox(height: 12),
                 ],
 
                 // 5. CASH ON HAND
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.secondary.withOpacity(0.5)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.account_balance_wallet, color: AppColors.primary),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("Cash on Hand", style: TextStyle(fontSize: 12, color: AppColors.textPrimary)),
-                          Text(
-                            "₱${cashOnHand.toStringAsFixed(2)}", 
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)
-                          ),
-                        ],
-                      )
-                    ],
-                  ),
+                  decoration: BoxDecoration(color: AppColors.secondary.withOpacity(0.2), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.secondary.withOpacity(0.5))),
+                  child: Row(children: [
+                    const Icon(Icons.account_balance_wallet, color: AppColors.primary),
+                    const SizedBox(width: 12),
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text("Cash on Hand", style: TextStyle(fontSize: 12, color: AppColors.textPrimary)), Text("₱${cashOnHand.toStringAsFixed(2)}", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary))])
+                  ]),
                 ),
 
                 const SizedBox(height: 16),
@@ -367,10 +313,14 @@ class _DashboardContent extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String title, double amount, Color color, {bool fullWidth = false}) {
+  
+  Widget _buildStatCard(String title, double amount, Color color, {bool fullWidth = false, bool isSmall = false}) {
     return Container(
       width: fullWidth ? double.infinity : null,
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.symmetric(
+        horizontal: 16, 
+        vertical: isSmall ? 16 : 24 
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -385,11 +335,22 @@ class _DashboardContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          const SizedBox(height: 4),
+          Text(
+            title, 
+            style: TextStyle(
+              fontSize: isSmall ? 12 : 13, 
+              color: AppColors.textSecondary, 
+              fontWeight: FontWeight.w500
+            )
+          ),
+          const SizedBox(height: 6),
           Text(
             "₱${amount.toStringAsFixed(2)}", 
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)
+            style: TextStyle(
+              fontSize: isSmall ? 18 : 24, 
+              fontWeight: FontWeight.w800, 
+              color: color
+            )
           ),
         ],
       ),

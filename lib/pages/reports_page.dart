@@ -63,7 +63,7 @@ class ReportsPage extends StatelessWidget {
                 final allTransactions = snapshot.data ?? [];
                 final activeTransactions = allTransactions.where((e) => !e.isDeleted).toList();
                 
-                // 🔥 Business Calculations
+                // 🔥 Business Logic: Separate Income & Expenses
                 final totalIncome = activeTransactions
                     .where((e) => e.isIncome)
                     .fold(0.0, (sum, item) => sum + item.amount);
@@ -72,9 +72,9 @@ class ReportsPage extends StatelessWidget {
                     .where((e) => !e.isIncome && !e.isCapital)
                     .fold(0.0, (sum, item) => sum + item.amount);
 
-                // Separate lists for breakdown charts
-                final expenseTransactions = activeTransactions.where((e) => !e.isIncome && !e.isCapital).toList();
-                final incomeTransactions = activeTransactions.where((e) => e.isIncome).toList();
+                // Lists for Breakdown Charts
+                final expenseList = activeTransactions.where((e) => !e.isIncome && !e.isCapital).toList();
+                final incomeList = activeTransactions.where((e) => e.isIncome).toList();
 
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -87,28 +87,28 @@ class ReportsPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       
-                      // 2. Income Breakdown (Where money comes from)
-                      if (incomeTransactions.isNotEmpty)
+                      // 2. Income Breakdown (Sales Source)
+                      if (incomeList.isNotEmpty)
                         CategoryBreakdownCard(
                           title: "Income Sources",
-                          expenses: incomeTransactions,
+                          expenses: incomeList,
                           isIncome: true,
                         ),
                         
                       const SizedBox(height: 16),
 
-                      // 3. Expense Breakdown (Where money goes)
-                      if (expenseTransactions.isNotEmpty)
+                      // 3. Expense Breakdown (Cost Center)
+                      if (expenseList.isNotEmpty)
                         CategoryBreakdownCard(
                           title: "Expense Breakdown",
-                          expenses: expenseTransactions,
+                          expenses: expenseList,
                           isIncome: false,
                         ),
                         
-                      if (incomeTransactions.isEmpty && expenseTransactions.isEmpty)
+                      if (incomeList.isEmpty && expenseList.isEmpty)
                         const Padding(
                           padding: EdgeInsets.only(top: 40),
-                          child: Text("No transactions available for reports.", style: TextStyle(color: Colors.grey)),
+                          child: Text("No transactions available.", style: TextStyle(color: Colors.grey)),
                         ),
 
                       const SizedBox(height: 20),
