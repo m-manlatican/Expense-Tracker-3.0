@@ -16,6 +16,8 @@ class Expense {
   final bool isCapital;
   final int? quantity;
   final bool isPaid; 
+  // 🔥 NEW: Customer or Supplier Name
+  final String contactName; 
 
   Expense({
     required this.id,
@@ -31,9 +33,11 @@ class Expense {
     this.isIncome = false,
     this.isCapital = false,
     this.quantity,
-    this.isPaid = true, 
+    this.isPaid = true,
+    this.contactName = '', // Default empty
   });
 
+  // ... [Categories Lists & Helper remain the same] ...
   static const List<String> expenseCategories = [
     'Inventory', 'Rent', 'Utilities', 'Labor', 'Marketing', 'Equipment', 'Tax', 'Other'
   ];
@@ -48,7 +52,6 @@ class Expense {
 
   static Map<String, dynamic> getCategoryDetails(String category) {
     switch (category) {
-      // Expenses
       case 'Inventory': return {'icon': Icons.inventory_2, 'color': const Color(0xFFE76F51)}; 
       case 'Rent': return {'icon': Icons.store, 'color': const Color(0xFF264653)}; 
       case 'Utilities': return {'icon': Icons.bolt, 'color': const Color(0xFFE9C46A)}; 
@@ -56,18 +59,13 @@ class Expense {
       case 'Marketing': return {'icon': Icons.campaign, 'color': const Color(0xFF8D99AE)}; 
       case 'Equipment': return {'icon': Icons.build, 'color': const Color(0xFF607D8B)};
       case 'Tax': return {'icon': Icons.account_balance, 'color': const Color(0xFF9E9E9E)};
-      
-      // Income
       case 'Product Sales': return {'icon': Icons.point_of_sale, 'color': const Color(0xFF2A9D8F)}; 
       case 'Service Fee': return {'icon': Icons.handyman, 'color': const Color(0xFF2A9D8F)}; 
       case 'Other Income': return {'icon': Icons.attach_money, 'color': const Color(0xFF2A9D8F)};
-
-      // Capital
       case 'Initial Capital': return {'icon': Icons.savings, 'color': const Color(0xFF4E6AFF)}; 
       case 'Additional Investment': return {'icon': Icons.add_card, 'color': const Color(0xFF4E6AFF)};
       case 'Loan': return {'icon': Icons.credit_score, 'color': const Color(0xFF3F51B5)};
       case 'Grant': return {'icon': Icons.card_giftcard, 'color': const Color(0xFF673AB7)};
-      
       default: return {'icon': Icons.grid_view, 'color': const Color(0xFF8E8E93)}; 
     }
   }
@@ -86,7 +84,8 @@ class Expense {
       'isIncome': isIncome,
       'isCapital': isCapital,
       'quantity': quantity,
-      'isPaid': isPaid, // Save status
+      'isPaid': isPaid,
+      'contactName': contactName, // 🔥 Save Name
     };
   }
 
@@ -105,7 +104,8 @@ class Expense {
       isIncome: map['isIncome'] ?? false,
       isCapital: map['isCapital'] ?? false,
       quantity: map['quantity'] as int?,
-      isPaid: map['isPaid'] ?? true, // Load status
+      isPaid: map['isPaid'] ?? true,
+      contactName: map['contactName'] ?? '', // 🔥 Load Name
     );
   }
 

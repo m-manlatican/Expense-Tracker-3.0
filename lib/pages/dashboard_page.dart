@@ -201,7 +201,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
                 return _DashboardContent(
                   manualCapital: manualCapital,
-                  userName: userName, // 🔥 Pass Name
+                  userName: userName, 
                   totalIncome: totalIncome,
                   totalExpenses: totalExpenses,
                   pendingIncome: pendingIncome,
@@ -257,7 +257,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
 class _DashboardContent extends StatelessWidget {
   final double manualCapital;
-  final String userName; // 🔥 NEW: Receive Name
+  final String userName; 
   final double totalIncome;
   final double totalExpenses;
   final double pendingIncome;
@@ -305,7 +305,7 @@ class _DashboardContent extends StatelessWidget {
                 const SizedBox(height: 12),
                 
                 Row(children: [
-                  Expanded(child: _buildStatCard("Net Profit", netProfit, netProfit >= 0 ? AppColors.primary : AppColors.expense)),
+                  Expanded(child: _buildStatCard("Net Profit", netProfit, netProfit >= 0 ? AppColors.success : AppColors.expense)),
                   const SizedBox(width: 12),
                   Expanded(child: _buildStatCard("Total Sales", totalIncome, AppColors.success)),
                 ]),
@@ -326,7 +326,7 @@ class _DashboardContent extends StatelessWidget {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: AppColors.secondary.withOpacity(0.2), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.secondary.withOpacity(0.5))),
+                  decoration: BoxDecoration(color: AppColors.secondary, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.secondary.withOpacity(0.5))),
                   child: Row(children: [
                     const Icon(Icons.account_balance_wallet, color: AppColors.primary),
                     const SizedBox(width: 12),

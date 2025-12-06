@@ -17,13 +17,12 @@ class ExpenseCard extends StatelessWidget {
       amountColor = AppColors.success;
       prefix = "+ ";
     } else if (expense.isCapital) {
-      amountColor = const Color(0xFF4E6AFF); 
+      amountColor = const Color(0xFF4E6AFF);
       prefix = "C ";
     }
 
-    // 🔥 VISUAL CUE FOR PENDING
     if (!expense.isPaid) {
-      amountColor = Colors.orange; 
+      amountColor = Colors.orange;
       prefix = "⏳ ";
     }
 
@@ -44,8 +43,19 @@ class ExpenseCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(expense.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.textPrimary)),
-                    if (expense.quantity != null)
-                      Text("${expense.quantity} pcs @ ₱${(expense.amount / (expense.quantity ?? 1)).toStringAsFixed(2)}", style: const TextStyle(fontSize: 12, color: AppColors.textSecondary))
+                    
+                    // 🔥 SHOW CONTACT NAME IF EXISTS
+                    if (expense.contactName.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          expense.isIncome ? "Customer: ${expense.contactName}" : "Payee: ${expense.contactName}",
+                          style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+
+                    if (expense.quantity != null && expense.quantity! > 0)
+                      Text("${expense.quantity} pcs @ ₱${(expense.amount / expense.quantity!).toStringAsFixed(2)}", style: const TextStyle(fontSize: 12, color: AppColors.textSecondary))
                     else
                       Text(expense.category, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                   ],
@@ -56,8 +66,8 @@ class ExpenseCard extends StatelessWidget {
                 children: [
                   Text('$prefix₱${expense.amount.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: amountColor)),
                   const SizedBox(height: 2),
-                  // 🔥 SHOW PENDING LABEL
-                  Text(expense.isPaid ? expense.dateLabel : "PENDING", style: TextStyle(fontSize: 12, color: expense.isPaid ? AppColors.textSecondary : Colors.orange, fontWeight: expense.isPaid ? FontWeight.normal : FontWeight.bold)),
+                  // 🔥 Show Date
+                  Text(expense.dateLabel, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                 ],
               ),
             ],
