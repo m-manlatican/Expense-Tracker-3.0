@@ -5,40 +5,38 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Expose Auth State Stream for AuthGate
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Get Current User ID
   String? get currentUserId => _auth.currentUser?.uid;
 
-  // Sign In
   Future<UserCredential> signIn(String email, String password) async {
-    // We use signInWithEmailAndPassword directly to avoid enumeration protection issues
     return await _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
-  // Register
+  // 🔥 UPDATED: Separate First and Last Name
   Future<UserCredential> register({
-    required String email,
-    required String password,
-    required String fullName,
+    required String email, 
+    required String password, 
+    required String firstName,
+    required String lastName,
   }) async {
     UserCredential cred = await _auth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
+      email: email, 
+      password: password
     );
 
-    // Create user document in Firestore
+    // Save user details to Firestore
     await _firestore.collection('users').doc(cred.user!.uid).set({
-      'fullName': fullName,
+      'firstName': firstName,
+      'lastName': lastName,
       'email': email,
       'createdAt': Timestamp.now(),
+      'totalBudget': 0.0,
     });
 
     return cred;
   }
 
-  // Sign Out
   Future<void> signOut() async {
     await _auth.signOut();
   }

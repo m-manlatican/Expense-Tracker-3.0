@@ -1,5 +1,5 @@
 import 'package:expense_tracker_3_0/app_colors.dart';
-import 'package:expense_tracker_3_0/cards/spending_overview_card.dart'; // Import the Enum from here
+import 'package:expense_tracker_3_0/cards/spending_overview_card.dart';
 import 'package:expense_tracker_3_0/cards/total_budget_card.dart';
 import 'package:expense_tracker_3_0/models/all_expense_model.dart';
 import 'package:expense_tracker_3_0/pages/all_expenses_page.dart';
@@ -23,10 +23,12 @@ class _DashboardPageState extends State<DashboardPage> {
   final FirestoreService _firestoreService = FirestoreService();
   final AuthService _authService = AuthService();
 
+  // Streams
   late Stream<List<Expense>> _expensesStream;
   late Stream<double> _budgetStream;
+  late Stream<String> _userNameStream; // 🔥 NEW: Name Stream
 
-  // 🔥 NEW: Track Selected Chart Range
+  // Chart State
   ChartTimeRange _selectedChartRange = ChartTimeRange.week;
 
   @override
@@ -34,16 +36,17 @@ class _DashboardPageState extends State<DashboardPage> {
     super.initState();
     _expensesStream = _firestoreService.getExpensesStream();
     _budgetStream = _firestoreService.getUserBudgetStream();
+    _userNameStream = _firestoreService.getUserName(); // 🔥 Init Name Stream
   }
 
-  // 🔥 UPDATED: Dynamic Chart Logic
+  // Dynamic Chart Data (Sales Trend)
   Map<String, dynamic> _getChartData(List<Expense> expenses) {
     List<double> values = [];
     List<String> dates = [];
     DateTime now = DateTime.now();
 
     if (_selectedChartRange == ChartTimeRange.day) {
-      // --- DAY VIEW (Hourly: 00:00 - 23:00) ---
+      // DAY VIEW (Hourly)
       for (int i = 0; i < 24; i++) {
         double hourlySum = expenses.where((e) {
           DateTime eDate = e.date.toDate();
@@ -55,19 +58,17 @@ class _DashboardPageState extends State<DashboardPage> {
         }).fold(0.0, (sum, item) => sum + item.amount);
         
         values.add(hourlySum);
-        
-        // Show label every 4 hours to avoid clutter
+        // Show label every 4 hours
         if (i % 4 == 0) {
           int hour = i == 0 ? 12 : (i > 12 ? i - 12 : i);
           String ampm = i < 12 ? "AM" : "PM";
           dates.add("$hour $ampm");
         } else {
-          dates.add(""); // Empty label for spacing
+          dates.add(""); 
         }
       }
-
     } else if (_selectedChartRange == ChartTimeRange.week) {
-      // --- WEEK VIEW (Last 7 Days) ---
+      // WEEK VIEW (Last 7 Days)
       for (int i = 6; i >= 0; i--) {
         DateTime target = now.subtract(Duration(days: i));
         double dailySum = expenses.where((e) {
@@ -81,9 +82,8 @@ class _DashboardPageState extends State<DashboardPage> {
         values.add(dailySum);
         dates.add("${target.month}/${target.day}");
       }
-
     } else {
-      // --- MONTH VIEW (Last 30 Days) ---
+      // MONTH VIEW (Last 30 Days)
       for (int i = 29; i >= 0; i--) {
         DateTime target = now.subtract(Duration(days: i));
         double dailySum = expenses.where((e) {
@@ -95,7 +95,6 @@ class _DashboardPageState extends State<DashboardPage> {
         }).fold(0.0, (sum, item) => sum + item.amount);
 
         values.add(dailySum);
-        
         // Show label every 5 days
         if (i % 5 == 0) {
           dates.add("${target.month}/${target.day}");
@@ -153,88 +152,103 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Budget Stream
     return StreamBuilder<double>(
       stream: _budgetStream,
       builder: (context, budgetSnapshot) {
-        if (budgetSnapshot.connectionState == ConnectionState.waiting) return Scaffold(backgroundColor: AppColors.background, body: _buildLoadingDashboard());
-        
-        final double currentCapital = budgetSnapshot.data ?? 0.00;
+        if (budgetSnapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(backgroundColor: AppColors.background, body: _buildLoadingDashboard());
+        }
+        final double manualCapital = budgetSnapshot.data ?? 0.00;
 
-        final dashboardTab = StreamBuilder<List<Expense>>(
-          stream: _expensesStream,
-          builder: (context, expenseSnapshot) {
-            if (expenseSnapshot.connectionState == ConnectionState.waiting) return _buildLoadingDashboard();
+        // 2. 🔥 Name Stream
+        return StreamBuilder<String>(
+          stream: _userNameStream,
+          builder: (context, nameSnapshot) {
+            final String userName = nameSnapshot.data ?? "User";
 
-            double totalExpenses = 0.0;
-            double totalIncome = 0.0;
-            double pendingIncome = 0.0;
-            double pendingExpense = 0.0;
-            
-            List<double> chartValues = [];
-            List<String> chartDates = [];
+            // 3. Expenses Stream
+            final dashboardTab = StreamBuilder<List<Expense>>(
+              stream: _expensesStream,
+              builder: (context, expenseSnapshot) {
+                if (expenseSnapshot.connectionState == ConnectionState.waiting) {
+                  return _buildLoadingDashboard();
+                }
 
-            if (expenseSnapshot.hasData) {
-              final allTransactions = expenseSnapshot.data!.where((e) => !e.isDeleted).toList();
-              
-              totalIncome = allTransactions.where((e) => e.isIncome && e.isPaid).fold(0.0, (sum, item) => sum + item.amount);
-              totalExpenses = allTransactions.where((e) => !e.isIncome && !e.isCapital && e.isPaid).fold(0.0, (sum, item) => sum + item.amount);
-              pendingIncome = allTransactions.where((e) => e.isIncome && !e.isPaid).fold(0.0, (sum, item) => sum + item.amount);
-              pendingExpense = allTransactions.where((e) => !e.isIncome && !e.isCapital && !e.isPaid).fold(0.0, (sum, item) => sum + item.amount);
-              
-              // 🔥 Calculate Chart Data based on Selection
-              final chartData = _getChartData(allTransactions);
-              chartValues = chartData['values'];
-              chartDates = chartData['dates'];
-            }
+                double totalExpenses = 0.0;
+                double totalIncome = 0.0;
+                double pendingIncome = 0.0;
+                double pendingExpense = 0.0;
+                List<double> chartValues = [];
+                List<String> chartDates = [];
 
-            return _DashboardContent(
-              manualCapital: currentCapital,
-              totalIncome: totalIncome,
-              totalExpenses: totalExpenses,
-              pendingIncome: pendingIncome,
-              pendingExpense: pendingExpense,
-              chartValues: chartValues,
-              chartDates: chartDates,
-              onUpdateCapital: _updateBudget,
-              onSignOut: _signOut,
-              // 🔥 Pass State
-              selectedRange: _selectedChartRange,
-              onRangeChanged: (range) => setState(() => _selectedChartRange = range),
+                if (expenseSnapshot.hasData) {
+                  final all = expenseSnapshot.data!.where((e) => !e.isDeleted).toList();
+                  
+                  // Paid only logic
+                  totalIncome = all.where((e) => e.isIncome && e.isPaid).fold(0.0, (sum, item) => sum + item.amount);
+                  totalExpenses = all.where((e) => !e.isIncome && !e.isCapital && e.isPaid).fold(0.0, (sum, item) => sum + item.amount);
+                  
+                  // Pending Logic
+                  pendingIncome = all.where((e) => e.isIncome && !e.isPaid).fold(0.0, (sum, item) => sum + item.amount);
+                  pendingExpense = all.where((e) => !e.isIncome && !e.isCapital && !e.isPaid).fold(0.0, (sum, item) => sum + item.amount);
+                  
+                  // Chart Data (Income)
+                  final chartData = _getChartData(all);
+                  chartValues = chartData['values'];
+                  chartDates = chartData['dates'];
+                }
+
+                return _DashboardContent(
+                  manualCapital: manualCapital,
+                  userName: userName, // 🔥 Pass Name
+                  totalIncome: totalIncome,
+                  totalExpenses: totalExpenses,
+                  pendingIncome: pendingIncome,
+                  pendingExpense: pendingExpense,
+                  chartValues: chartValues,
+                  chartDates: chartDates,
+                  onUpdateCapital: _updateBudget,
+                  onSignOut: _signOut,
+                  selectedRange: _selectedChartRange,
+                  onRangeChanged: (range) => setState(() => _selectedChartRange = range),
+                );
+              },
             );
-          },
-        );
 
-        final List<Widget> pages = [
-          dashboardTab, 
-          AllExpensesPage(onBackTap: () => _onItemTapped(0)), 
-          ReportsPage(onBackTap: () => _onItemTapped(0)), 
-        ];
+            final List<Widget> pages = [
+              dashboardTab,
+              AllExpensesPage(onBackTap: () => _onItemTapped(0)),
+              ReportsPage(onBackTap: () => _onItemTapped(0)),
+            ];
 
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          body: pages[_selectedIndex],
-          bottomNavigationBar: BottomNavigationBar(
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'Dashboard'),
-              BottomNavigationBarItem(icon: Icon(Icons.receipt_long_outlined), activeIcon: Icon(Icons.receipt_long), label: 'Records'),
-              BottomNavigationBarItem(icon: Icon(Icons.pie_chart_outline), activeIcon: Icon(Icons.pie_chart), label: 'Reports'),
-            ],
-            currentIndex: _selectedIndex,
-            onTap: _onItemTapped,
-            selectedItemColor: AppColors.primary,
-            unselectedItemColor: AppColors.textSecondary,
-            backgroundColor: Colors.white,
-            type: BottomNavigationBarType.fixed,
-            showUnselectedLabels: true,
-            elevation: 15,
-          ),
-          floatingActionButton: FloatingActionButton(
-            backgroundColor: AppColors.primary,
-            heroTag: 'add_expense_btn',
-            onPressed: () => Navigator.pushNamed(context, '/add_expense'),
-            child: const Icon(Icons.add, color: Colors.white, size: 30),
-          ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+            return Scaffold(
+              backgroundColor: AppColors.background,
+              body: pages[_selectedIndex],
+              bottomNavigationBar: BottomNavigationBar(
+                items: const [
+                  BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
+                  BottomNavigationBarItem(icon: Icon(Icons.receipt_long_outlined), label: 'Records'),
+                  BottomNavigationBarItem(icon: Icon(Icons.pie_chart_outline), label: 'Reports'),
+                ],
+                currentIndex: _selectedIndex,
+                onTap: _onItemTapped,
+                selectedItemColor: AppColors.primary,
+                unselectedItemColor: AppColors.textSecondary,
+                backgroundColor: Colors.white,
+                type: BottomNavigationBarType.fixed,
+                showUnselectedLabels: true,
+                elevation: 15,
+              ),
+              floatingActionButton: FloatingActionButton(
+                backgroundColor: AppColors.primary,
+                heroTag: 'add_expense_btn',
+                onPressed: () => Navigator.pushNamed(context, '/add_expense'),
+                child: const Icon(Icons.add, color: Colors.white, size: 30),
+              ),
+              floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+            );
+          }
         );
       }
     );
@@ -243,6 +257,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
 class _DashboardContent extends StatelessWidget {
   final double manualCapital;
+  final String userName; // 🔥 NEW: Receive Name
   final double totalIncome;
   final double totalExpenses;
   final double pendingIncome;
@@ -251,13 +266,12 @@ class _DashboardContent extends StatelessWidget {
   final List<String> chartDates;
   final Function(double) onUpdateCapital;
   final VoidCallback onSignOut;
-  
-  // 🔥 NEW: Chart Control
   final ChartTimeRange selectedRange;
   final ValueChanged<ChartTimeRange> onRangeChanged;
 
   const _DashboardContent({
     required this.manualCapital,
+    required this.userName,
     required this.totalIncome,
     required this.totalExpenses,
     required this.pendingIncome,
@@ -283,7 +297,8 @@ class _DashboardContent extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Column(
               children: [
-                HeaderTitle(onSignOut: onSignOut), 
+                // 🔥 Pass Name to Header
+                HeaderTitle(onSignOut: onSignOut, userName: userName), 
                 const SizedBox(height: 20),
                 
                 TotalBudgetCard(currentBudget: manualCapital, onBudgetChanged: onUpdateCapital),
@@ -311,7 +326,7 @@ class _DashboardContent extends StatelessWidget {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: AppColors.secondary, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.secondary.withOpacity(0.5))),
+                  decoration: BoxDecoration(color: AppColors.secondary.withOpacity(0.2), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.secondary.withOpacity(0.5))),
                   child: Row(children: [
                     const Icon(Icons.account_balance_wallet, color: AppColors.primary),
                     const SizedBox(width: 12),
@@ -321,7 +336,6 @@ class _DashboardContent extends StatelessWidget {
 
                 const SizedBox(height: 16),
                 
-                // 🔥 PASS NEW CONTROLS
                 SpendingOverviewCard(
                   spendingPoints: chartValues, 
                   dateLabels: chartDates,

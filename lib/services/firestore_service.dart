@@ -12,10 +12,40 @@ class FirestoreService {
     return _firestore.collection('users').doc(userId);
   }
 
+  // 🔥 UPDATED: Smart Name Retrieval (Handles Old & New Users)
+  Stream<String> getUserName() {
+    final ref = _userDoc;
+    if (ref == null) return Stream.value("User");
+
+    return ref.snapshots().map((snapshot) {
+      if (snapshot.exists && snapshot.data() != null) {
+        final data = snapshot.data() as Map<String, dynamic>;
+        
+        // 1. Try to get the NEW 'firstName' field
+        if (data.containsKey('firstName') && data['firstName'] != null) {
+           final String first = data['firstName'];
+           if (first.isNotEmpty) return first;
+        }
+        
+        // 2. Fallback: If no firstName, try OLD 'fullName'
+        if (data.containsKey('fullName') && data['fullName'] != null) {
+           final String full = data['fullName'];
+           if (full.isNotEmpty) {
+             // Split string by space and take the first part (e.g. "John Doe" -> "John")
+             return full.split(' ').first;
+           }
+        }
+      }
+      // 3. Default if absolutely nothing is found
+      return "User";
+    });
+  }
+
   // --- BUDGET METHODS ---
   Stream<double> getUserBudgetStream() {
     final ref = _userDoc;
     if (ref == null) return Stream.value(0.0);
+
     return ref.snapshots().map((snapshot) {
       if (snapshot.exists && snapshot.data() != null) {
         final data = snapshot.data() as Map<String, dynamic>;
@@ -55,28 +85,24 @@ class FirestoreService {
     await ref.doc(expense.id).update(expense.toMap());
   }
 
-  // 🔥 SOFT DELETE: Moves to History (Updates flag only)
   Future<void> deleteExpense(String id) async {
     final ref = _userDoc?.collection('expenses');
     if (ref == null) throw Exception("User not logged in");
     await ref.doc(id).update({'isDeleted': true});
   }
 
-  // 🔥 RESTORE: Moves back to Active List
   Future<void> restoreExpense(String id) async {
     final ref = _userDoc?.collection('expenses');
     if (ref == null) throw Exception("User not logged in");
     await ref.doc(id).update({'isDeleted': false});
   }
 
-  // 🔥 HARD DELETE: Permanently removes from DB (Used in History Page)
   Future<void> permanentlyDeleteExpense(String id) async {
     final ref = _userDoc?.collection('expenses');
     if (ref == null) throw Exception("User not logged in");
     await ref.doc(id).delete();
   }
 
-  // 🔥 CLEAR ALL HISTORY
   Future<void> clearHistory() async {
     final ref = _userDoc?.collection('expenses');
     if (ref == null) throw Exception("User not logged in");
