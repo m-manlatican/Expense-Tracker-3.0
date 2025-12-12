@@ -51,7 +51,6 @@ class FirestoreService {
 
     if (snapshot.docs.isNotEmpty) {
       final doc = snapshot.docs.first;
-      // Optimized: Use FieldValue.increment for atomic updates
       await doc.reference.update({
         'quantity': FieldValue.increment(quantityChange),
         'lastUpdated': Timestamp.now()
@@ -103,6 +102,13 @@ class FirestoreService {
     final ref = _userDoc?.collection('expenses');
     if (ref == null) throw Exception("User not logged in");
     await ref.doc(expense.id).update(expense.toMap());
+  }
+
+  // 🔥 NEW: Shortcut method to mark as paid
+  Future<void> markAsPaid(String id) async {
+    final ref = _userDoc?.collection('expenses');
+    if (ref == null) throw Exception("User not logged in");
+    await ref.doc(id).update({'isPaid': true});
   }
 
   Future<void> deleteExpense(String id) async {

@@ -5,8 +5,15 @@ import 'package:flutter/material.dart';
 class ExpenseCard extends StatelessWidget {
   final Expense expense;
   final VoidCallback onEdit;
+  // 🔥 NEW: Callback for the shortcut button
+  final VoidCallback? onMarkAsPaid;
 
-  const ExpenseCard({super.key, required this.expense, required this.onEdit});
+  const ExpenseCard({
+    super.key, 
+    required this.expense, 
+    required this.onEdit,
+    this.onMarkAsPaid,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -29,14 +36,29 @@ class ExpenseCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.06), spreadRadius: 2, blurRadius: 6, offset: const Offset(0, 3))]),
+      decoration: BoxDecoration(
+        color: Colors.white, 
+        borderRadius: BorderRadius.circular(16), 
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.06), 
+            spreadRadius: 2, 
+            blurRadius: 6, 
+            offset: const Offset(0, 3)
+          )
+        ]
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(backgroundColor: expense.iconColor.withOpacity(0.1), radius: 20, child: Icon(expense.icon, color: expense.iconColor, size: 20)),
+              CircleAvatar(
+                backgroundColor: expense.iconColor.withOpacity(0.1), 
+                radius: 20, 
+                child: Icon(expense.icon, color: expense.iconColor, size: 20)
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -44,11 +66,11 @@ class ExpenseCard extends StatelessWidget {
                   children: [
                     Text(expense.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.textPrimary)),
                     
-                    // 🔥 SHOW CONTACT NAME IF EXISTS
                     if (expense.contactName.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
                         child: Text(
+                          // Shows Customer or Supplier
                           expense.isIncome ? "Customer: ${expense.contactName}" : "Payee: ${expense.contactName}",
                           style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w500),
                         ),
@@ -66,16 +88,58 @@ class ExpenseCard extends StatelessWidget {
                 children: [
                   Text('$prefix₱${expense.amount.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: amountColor)),
                   const SizedBox(height: 2),
-                  // 🔥 Show Date
                   Text(expense.dateLabel, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                 ],
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: InkWell(onTap: onEdit, borderRadius: BorderRadius.circular(8), child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(8)), child: const Text("Edit", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)))),
+          
+          // 🔥 ACTION BUTTONS ROW
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              // Show "Mark Paid" button ONLY if pending
+              if (!expense.isPaid && onMarkAsPaid != null && !expense.isCapital) ...[
+                InkWell(
+                  onTap: onMarkAsPaid,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.success.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_circle_outline, size: 14, color: AppColors.success),
+                        const SizedBox(width: 4),
+                        Text(
+                          expense.isIncome ? "Received" : "Paid",
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.success)
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+
+              // Edit Button
+              InkWell(
+                onTap: onEdit, 
+                borderRadius: BorderRadius.circular(8), 
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), 
+                  decoration: BoxDecoration(
+                    color: AppColors.background, 
+                    borderRadius: BorderRadius.circular(8)
+                  ), 
+                  child: const Text("Edit", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary))
+                )
+              ),
+            ],
           )
         ],
       ),

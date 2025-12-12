@@ -87,6 +87,21 @@ class AllExpensesPageState extends State<AllExpensesPage> {
     await Navigator.pushNamed(context, '/edit_expense', arguments: expense);
   }
 
+  // 🔥 NEW: Handler for Marking as Paid
+  void _handleMarkAsPaid(Expense expense) async {
+    await _firestoreService.markAsPaid(expense.id);
+    
+    if (!mounted) return;
+    String text = expense.isIncome ? "Marked as Received" : "Marked as Paid";
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text), 
+        backgroundColor: AppColors.success,
+        duration: const Duration(seconds: 2),
+      )
+    );
+  }
+
   void _deleteExpense(Expense expense) async {
     await _firestoreService.deleteExpense(expense.id);
     if (!mounted) return;
@@ -131,14 +146,12 @@ class AllExpensesPageState extends State<AllExpensesPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 🔥 1. Wrap with DefaultTabController for 2 Tabs
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: Column(
           children: [
-            // Custom Header with TabBar
             Container(
               padding: const EdgeInsets.only(top: 50, left: 16, right: 16, bottom: 0),
               decoration: const BoxDecoration(
@@ -148,7 +161,6 @@ class AllExpensesPageState extends State<AllExpensesPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Top Row (Back, Title, Icons)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -162,7 +174,6 @@ class AllExpensesPageState extends State<AllExpensesPage> {
                         ),
                       ),
                       
-                      // 🔥 Updated Title
                       const Text(
                         'Expenses & Income', 
                         style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600)
@@ -204,7 +215,6 @@ class AllExpensesPageState extends State<AllExpensesPage> {
                   
                   const SizedBox(height: 16),
 
-                  // 🔥 TabBar Integration
                   const TabBar(
                     indicatorColor: AppColors.secondary,
                     indicatorWeight: 3,
@@ -221,7 +231,6 @@ class AllExpensesPageState extends State<AllExpensesPage> {
               ),
             ),
 
-            // Content Body
             Expanded(
               child: StreamBuilder<List<Expense>>(
                 stream: _firestoreService.getExpensesStream(),
@@ -233,10 +242,8 @@ class AllExpensesPageState extends State<AllExpensesPage> {
                     return const Center(child: Text('No transactions yet.'));
                   }
 
-                  // 1. Get Active Transactions
                   List<Expense> allTransactions = snapshot.data!.where((e) => !e.isDeleted).toList();
 
-                  // 2. Apply Sorting
                   allTransactions.sort((a, b) {
                     switch (_currentSort) {
                       case SortOption.newest: return b.date.compareTo(a.date);
@@ -246,15 +253,11 @@ class AllExpensesPageState extends State<AllExpensesPage> {
                     }
                   });
 
-                  // 3. Apply Category Filters
                   if (_selectedCategories.isNotEmpty) {
                     allTransactions = allTransactions.where((e) => _selectedCategories.contains(e.category)).toList();
                   }
 
-                  // 4. Split Data
-                  // Expenses Tab: Shows Expenses only
                   final expenseList = allTransactions.where((e) => !e.isIncome && !e.isCapital).toList();
-                  // Income Tab: Shows Sales (Income) and Capital (Investment)
                   final incomeList = allTransactions.where((e) => e.isIncome || e.isCapital).toList();
 
                   return TabBarView(
@@ -264,6 +267,8 @@ class AllExpensesPageState extends State<AllExpensesPage> {
                         expenses: expenseList,
                         onEdit: _editExpense,
                         onDelete: _deleteExpense,
+                        // 🔥 PASS CALLBACK
+                        onMarkAsPaid: _handleMarkAsPaid,
                       ),
                       
                       // Tab 2: Income List
@@ -271,6 +276,8 @@ class AllExpensesPageState extends State<AllExpensesPage> {
                         expenses: incomeList,
                         onEdit: _editExpense,
                         onDelete: _deleteExpense,
+                        // 🔥 PASS CALLBACK
+                        onMarkAsPaid: _handleMarkAsPaid,
                       ),
                     ],
                   );

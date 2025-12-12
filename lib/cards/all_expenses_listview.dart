@@ -7,12 +7,15 @@ class AllExpensesListView extends StatelessWidget {
   final List<Expense> expenses;
   final void Function(Expense) onEdit;
   final void Function(Expense) onDelete;
+  // 🔥 NEW: Callback for Mark Paid
+  final void Function(Expense)? onMarkAsPaid;
 
   const AllExpensesListView({
     super.key,
     required this.expenses,
     required this.onEdit,
     required this.onDelete,
+    this.onMarkAsPaid,
   });
 
   @override
@@ -28,16 +31,15 @@ class AllExpensesListView extends StatelessWidget {
       itemBuilder: (context, index) {
         final expense = expenses[index];
         
-        // 🔥 SWIPE RIGHT TO DELETE
         return Dismissible(
           key: Key(expense.id),
-          direction: DismissDirection.startToEnd, // Swipe Right
+          direction: DismissDirection.startToEnd, 
           background: Container(
-            alignment: Alignment.centerLeft, // Icon appears on the left
+            alignment: Alignment.centerLeft, 
             padding: const EdgeInsets.only(left: 20),
             margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.expense, // Red Warning Color
+              color: AppColors.expense, 
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Row(
@@ -55,7 +57,8 @@ class AllExpensesListView extends StatelessWidget {
           child: ExpenseCard(
             expense: expense,
             onEdit: () => onEdit(expense),
-            // onDelete is no longer passed to the card
+            // 🔥 Pass the callback to the card
+            onMarkAsPaid: onMarkAsPaid != null ? () => onMarkAsPaid!(expense) : null,
           ),
         );
       },
