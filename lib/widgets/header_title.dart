@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 class HeaderTitle extends StatelessWidget {
   final VoidCallback onSignOut;
-  final String userName; // 🔥 NEW PARAMETER
+  final String userName; 
 
   const HeaderTitle({
     super.key,
@@ -16,19 +16,18 @@ class HeaderTitle extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // 🔥 Replaced simple branding with Welcome Message
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-             // Small branding line
+             // 🔥 UPDATED: Explicitly Force Light Logo
              const Branding(
               iconSize: 20, 
               fontSize: 14, 
               color: Colors.white70,
-              vertical: false
+              vertical: false,
+              isLightLogo: true, // <--- This forces 'assets/logo_light.png'
             ),
             const SizedBox(height: 4),
-            // Welcome Text
             Text(
               "Welcome, $userName",
               style: const TextStyle(
@@ -42,7 +41,6 @@ class HeaderTitle extends StatelessWidget {
         
         const Spacer(),
 
-        // Sign Out Button
         InkWell(
           onTap: onSignOut,
           borderRadius: BorderRadius.circular(10),

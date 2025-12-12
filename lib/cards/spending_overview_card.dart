@@ -3,7 +3,8 @@ import 'package:expense_tracker_3_0/cards/white_card.dart';
 import 'package:expense_tracker_3_0/widgets/line_chart_painter.dart';
 import 'package:flutter/material.dart';
 
-enum ChartTimeRange { day, week, month }
+// 🔥 UPDATED: Removed 'day'
+enum ChartTimeRange { week, month }
 
 class SpendingOverviewCard extends StatelessWidget {
   final List<double> spendingPoints;
@@ -73,7 +74,7 @@ class SpendingOverviewCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                _buildRangeButton("Day", ChartTimeRange.day),
+                // 🔥 UPDATED: Removed "Day" button
                 _buildRangeButton("Week", ChartTimeRange.week),
                 _buildRangeButton("Month", ChartTimeRange.month),
               ],
@@ -82,12 +83,11 @@ class SpendingOverviewCard extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // 🔥 CHART & LABELS (Aligned via LayoutBuilder)
+          // CHART & LABELS
           LayoutBuilder(
             builder: (context, constraints) {
               final width = constraints.maxWidth;
               final count = points.length;
-              // Avoid division by zero
               final stepWidth = count > 1 ? width / (count - 1) : 0.0;
 
               return Column(
@@ -97,14 +97,13 @@ class SpendingOverviewCard extends StatelessWidget {
                     height: 140,
                     width: width,
                     child: CustomPaint(
-                      // Pass labels to painter if you want grid lines to match (optional)
                       painter: LineChartPainter(points, showGridLines: true),
                     ),
                   ),
                   
                   const SizedBox(height: 8),
 
-                  // 🔥 LABELS AREA (Pixel-Perfect Alignment)
+                  // LABELS AREA
                   SizedBox(
                     height: 20,
                     width: width,
@@ -113,11 +112,10 @@ class SpendingOverviewCard extends StatelessWidget {
                         final label = dateLabels[index];
                         if (label.isEmpty) return const SizedBox.shrink();
 
-                        // Calculate exact X position to match the chart point
                         final double xPos = index * stepWidth;
 
                         return Positioned(
-                          left: xPos - 20, // Shift left by half width to center (assuming ~40 width)
+                          left: xPos - 20, 
                           width: 40,
                           top: 0,
                           bottom: 0,

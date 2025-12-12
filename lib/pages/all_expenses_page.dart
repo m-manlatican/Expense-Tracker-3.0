@@ -29,16 +29,26 @@ class AllExpensesPageState extends State<AllExpensesPage> {
   @override
   void initState() {
     super.initState();
-    _checkAndShowSwipeHint();
+    // 🔥 FIX: Use addPostFrameCallback to ensure the widget is fully built
+    // before we try to show any SnackBars or access context/prefs.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndShowSwipeHint();
+    });
   }
 
   Future<void> _checkAndShowSwipeHint() async {
+    if (!mounted) return;
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final bool hasDismissedHint = prefs.getBool('dismissed_swipe_hint') ?? false;
+      
       if (hasDismissedHint) return;
 
-      await Future.delayed(const Duration(seconds: 1));
+      // 🔥 OPTIMIZED: Small delay to let the enter animation finish 
+      // so the user actually sees the screen before the popup appears.
+      await Future.delayed(const Duration(milliseconds: 500));
+      
       if (!mounted) return;
 
       _showSwipeHint(prefs);
@@ -48,6 +58,9 @@ class AllExpensesPageState extends State<AllExpensesPage> {
   }
 
   void _showSwipeHint(SharedPreferences prefs) {
+    // Check mounted again right before showing
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Row(
@@ -267,7 +280,6 @@ class AllExpensesPageState extends State<AllExpensesPage> {
                         onEdit: _editExpense,
                         onDelete: _deleteExpense,
                         onMarkAsPaid: _handleMarkAsPaid,
-                        // 🔥 CUSTOM MESSAGE FOR EXPENSES
                         emptyMessage: "No expenses yet",
                       ),
                       
@@ -277,7 +289,6 @@ class AllExpensesPageState extends State<AllExpensesPage> {
                         onEdit: _editExpense,
                         onDelete: _deleteExpense,
                         onMarkAsPaid: _handleMarkAsPaid,
-                        // 🔥 CUSTOM MESSAGE FOR INCOME
                         emptyMessage: "No income yet",
                       ),
                     ],

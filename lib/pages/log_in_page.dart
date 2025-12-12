@@ -1,7 +1,7 @@
 import 'package:expense_tracker_3_0/app_colors.dart';
 import 'package:expense_tracker_3_0/pages/register_page.dart';
 import 'package:expense_tracker_3_0/services/auth_service.dart'; 
-import 'package:expense_tracker_3_0/widgets/branding.dart'; // Import Branding
+import 'package:expense_tracker_3_0/widgets/branding.dart'; 
 import 'package:expense_tracker_3_0/widgets/form_fields.dart'; 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -103,12 +103,13 @@ class _LoginPageState extends State<LoginPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // 🔥 REPLACED HEADER WITH BRANDING
                 const Center(
+                  // 🔥 UPDATED: Specifically request Dark Logo
                   child: Branding(
                     iconSize: 60,
                     fontSize: 32,
                     vertical: true,
+                    isLightLogo: false, // Force Dark
                   ),
                 ),
                 const SizedBox(height: 40),

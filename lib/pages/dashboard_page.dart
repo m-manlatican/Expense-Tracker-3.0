@@ -1,9 +1,9 @@
 import 'package:expense_tracker_3_0/app_colors.dart';
-import 'package:expense_tracker_3_0/cards/low_stock_card.dart'; // 🔥 Import
+import 'package:expense_tracker_3_0/cards/low_stock_card.dart'; 
 import 'package:expense_tracker_3_0/cards/spending_overview_card.dart';
 import 'package:expense_tracker_3_0/cards/total_budget_card.dart';
 import 'package:expense_tracker_3_0/models/all_expense_model.dart';
-import 'package:expense_tracker_3_0/models/inventory_model.dart'; // 🔥 Import
+import 'package:expense_tracker_3_0/models/inventory_model.dart'; 
 import 'package:expense_tracker_3_0/pages/all_expenses_page.dart';
 import 'package:expense_tracker_3_0/pages/reports_page.dart';
 import 'package:expense_tracker_3_0/services/auth_service.dart';
@@ -25,13 +25,12 @@ class _DashboardPageState extends State<DashboardPage> {
   final FirestoreService _firestoreService = FirestoreService();
   final AuthService _authService = AuthService();
 
-  // Streams
   late Stream<List<Expense>> _expensesStream;
   late Stream<double> _budgetStream;
   late Stream<String> _userNameStream;
-  late Stream<List<InventoryItem>> _lowStockStream; // 🔥 Low Stock Stream
+  late Stream<List<InventoryItem>> _lowStockStream; 
 
-  // Chart State
+  // 🔥 UPDATED: Default is now WEEK (removed day)
   ChartTimeRange _selectedChartRange = ChartTimeRange.week;
 
   @override
@@ -40,40 +39,17 @@ class _DashboardPageState extends State<DashboardPage> {
     _expensesStream = _firestoreService.getExpensesStream();
     _budgetStream = _firestoreService.getUserBudgetStream();
     _userNameStream = _firestoreService.getUserName();
-    _lowStockStream = _firestoreService.getLowStockStream(); // 🔥 Init
+    _lowStockStream = _firestoreService.getLowStockStream(); 
   }
 
+  // 🔥 UPDATED CHART LOGIC (Removed Day loop)
   Map<String, dynamic> _getChartData(List<Expense> expenses) {
     List<double> values = [];
     List<String> dates = [];
     DateTime now = DateTime.now();
 
-    if (_selectedChartRange == ChartTimeRange.day) {
-      // 1. CHART FOR "DAY" (HOURLY)
-      // We loop from 0 (12 AM) to 23 (11 PM) for TODAY only.
-      for (int hour = 0; hour < 24; hour++) {
-        double hourlySum = expenses.where((e) {
-          DateTime eDate = e.date.toDate(); // Converts Firestore Timestamp to Local Device Time
-          
-          // Check if the expense is strictly from TODAY and matches the specific HOUR
-          bool isToday = eDate.year == now.year && eDate.month == now.month && eDate.day == now.day;
-          return e.isIncome && isToday && eDate.hour == hour;
-        }).fold(0.0, (sum, item) => sum + item.amount);
-
-        values.add(hourlySum);
-
-        // Generate Labels (Every 4 hours to avoid crowding: 12am, 4am, 8am...)
-        if (hour % 4 == 0) {
-          int displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
-          String ampm = hour < 12 ? "AM" : "PM";
-          dates.add("$displayHour $ampm");
-        } else {
-          dates.add(""); // Empty label for cleaner UI
-        }
-      }
-    } 
-    else if (_selectedChartRange == ChartTimeRange.week) {
-      // 2. CHART FOR "WEEK" (LAST 7 DAYS)
+    if (_selectedChartRange == ChartTimeRange.week) {
+      // 1. CHART FOR "WEEK" (LAST 7 DAYS)
       for (int i = 6; i >= 0; i--) {
         DateTime target = now.subtract(Duration(days: i));
         double dailySum = expenses.where((e) {
@@ -83,9 +59,8 @@ class _DashboardPageState extends State<DashboardPage> {
         values.add(dailySum);
         dates.add("${target.month}/${target.day}");
       }
-    } 
-    else {
-      // 3. CHART FOR "MONTH" (LAST 30 DAYS)
+    } else {
+      // 2. CHART FOR "MONTH" (LAST 30 DAYS)
       for (int i = 29; i >= 0; i--) {
         DateTime target = now.subtract(Duration(days: i));
         double dailySum = expenses.where((e) {
@@ -180,10 +155,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     List<String> chartDates = [];
 
                     if (expenseSnapshot.hasData) {
-                      // 🔥 CHANGED: Removed .where((e) => !e.isDeleted)
-                      // Now we calculate totals based on ALL items (Active + History)
                       final all = expenseSnapshot.data!.toList();
-                      
                       totalIncome = all.where((e) => e.isIncome && e.isPaid).fold(0.0, (sum, item) => sum + item.amount);
                       totalExpenses = all.where((e) => !e.isIncome && !e.isCapital && e.isPaid).fold(0.0, (sum, item) => sum + item.amount);
                       pendingIncome = all.where((e) => e.isIncome && !e.isPaid).fold(0.0, (sum, item) => sum + item.amount);
@@ -198,7 +170,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       _DashboardContent(
                         manualCapital: manualCapital,
                         userName: userName,
-                        lowStockItems: lowStockItems, // 🔥 Pass List
+                        lowStockItems: lowStockItems, 
                         totalIncome: totalIncome,
                         totalExpenses: totalExpenses,
                         pendingIncome: pendingIncome,
@@ -254,7 +226,7 @@ class _DashboardPageState extends State<DashboardPage> {
 class _DashboardContent extends StatelessWidget {
   final double manualCapital;
   final String userName;
-  final List<InventoryItem> lowStockItems; // 🔥 NEW PROP
+  final List<InventoryItem> lowStockItems;
   final double totalIncome;
   final double totalExpenses;
   final double pendingIncome;
@@ -269,7 +241,7 @@ class _DashboardContent extends StatelessWidget {
   const _DashboardContent({
     required this.manualCapital,
     required this.userName,
-    required this.lowStockItems, // 🔥
+    required this.lowStockItems, 
     required this.totalIncome,
     required this.totalExpenses,
     required this.pendingIncome,
@@ -298,17 +270,14 @@ class _DashboardContent extends StatelessWidget {
                 HeaderTitle(onSignOut: onSignOut, userName: userName), 
                 const SizedBox(height: 20),
 
-                // 🔥 1. LOW STOCK ALERT (Top Priority)
                 if (lowStockItems.isNotEmpty) ...[
                   LowStockCard(items: lowStockItems),
                   const SizedBox(height: 16),
                 ],
                 
-                // 2. CAPITAL
                 TotalBudgetCard(currentBudget: manualCapital, onBudgetChanged: onUpdateCapital),
                 const SizedBox(height: 12),
                 
-                // 3. PROFIT & SALES
                 Row(children: [
                   Expanded(child: _buildStatCard("Net Profit", netProfit, netProfit >= 0 ? AppColors.success : AppColors.expense)),
                   const SizedBox(width: 12),
@@ -316,11 +285,9 @@ class _DashboardContent extends StatelessWidget {
                 ]),
                 const SizedBox(height: 12),
                 
-                // 4. EXPENSES
                 _buildStatCard("Total Expenses", totalExpenses, AppColors.expense, fullWidth: true),
                 const SizedBox(height: 12),
 
-                // 5. PENDING ACCOUNTS
                 if (pendingIncome > 0 || pendingExpense > 0) ...[
                    Row(children: [
                       if (pendingIncome > 0) Expanded(child: _buildStatCard("To Collect", pendingIncome, Colors.orange, isSmall: true)),
@@ -330,11 +297,10 @@ class _DashboardContent extends StatelessWidget {
                    const SizedBox(height: 12),
                 ],
 
-                // 6. CASH ON HAND
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: AppColors.secondary, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.secondary.withOpacity(0.5))),
+                  decoration: BoxDecoration(color: AppColors.secondary.withOpacity(0.2), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.secondary.withOpacity(0.5))),
                   child: Row(children: [
                     const Icon(Icons.account_balance_wallet, color: AppColors.primary),
                     const SizedBox(width: 12),
@@ -344,7 +310,6 @@ class _DashboardContent extends StatelessWidget {
 
                 const SizedBox(height: 16),
                 
-                // 7. CHART
                 SpendingOverviewCard(
                   spendingPoints: chartValues, 
                   dateLabels: chartDates,
