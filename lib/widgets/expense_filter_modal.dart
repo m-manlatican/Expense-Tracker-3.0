@@ -61,122 +61,127 @@ class _ExpenseFilterModalState extends State<ExpenseFilterModal> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    // 🔥 FIX: Wrapped contents in SingleChildScrollView to fix the "Bottom overflowed by 39 pixels" error.
+    // Also added SafeArea to ensure it doesn't get cut off by phone notches/home bars.
+    return SafeArea(
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Filter & Sort",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _reset,
+                    child: const Text("Reset", style: TextStyle(color: AppColors.expense)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // --- SORT SECTION ---
               const Text(
-                "Filter & Sort",
+                "Sort By",
                 style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
                 ),
               ),
-              TextButton(
-                onPressed: _reset,
-                child: const Text("Reset", style: TextStyle(color: AppColors.expense)),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _buildSortChip("Newest", SortOption.newest),
+                  _buildSortChip("Oldest", SortOption.oldest),
+                  _buildSortChip("Highest \$", SortOption.highestAmount),
+                  _buildSortChip("Lowest \$", SortOption.lowestAmount),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
-          // --- SORT SECTION ---
-          const Text(
-            "Sort By",
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _buildSortChip("Newest", SortOption.newest),
-              _buildSortChip("Oldest", SortOption.oldest),
-              _buildSortChip("Highest \$", SortOption.highestAmount),
-              _buildSortChip("Lowest \$", SortOption.lowestAmount),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // --- CATEGORY SECTION ---
-          const Text(
-            "Categories",
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: widget.allCategories.map((category) {
-              final isSelected = _selectedCategories.contains(category);
-              return FilterChip(
-                label: Text(category),
-                selected: isSelected,
-                onSelected: (_) => _toggleCategory(category),
-                backgroundColor: AppColors.background,
-                selectedColor: AppColors.primary.withOpacity(0.15),
-                checkmarkColor: AppColors.primary,
-                labelStyle: TextStyle(
-                  color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              // --- CATEGORY SECTION ---
+              const Text(
+                "Categories",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
                 ),
-                // 🔥 FIX: Correctly defining the border using 'shape' and 'side'
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  side: BorderSide(
-                    color: isSelected ? AppColors.primary : Colors.transparent,
-                    width: 1,
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: widget.allCategories.map((category) {
+                  final isSelected = _selectedCategories.contains(category);
+                  return FilterChip(
+                    label: Text(category),
+                    selected: isSelected,
+                    onSelected: (_) => _toggleCategory(category),
+                    backgroundColor: AppColors.background,
+                    selectedColor: AppColors.primary.withOpacity(0.15),
+                    checkmarkColor: AppColors.primary,
+                    labelStyle: TextStyle(
+                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: BorderSide(
+                        color: isSelected ? AppColors.primary : Colors.transparent,
+                        width: 1,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 30),
+
+              // --- APPLY BUTTON ---
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _apply,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    "Apply Filters",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 30),
-
-          // --- APPLY BUTTON ---
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _apply,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 0,
               ),
-              child: const Text(
-                "Apply Filters",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+              const SizedBox(height: 20), 
+            ],
           ),
-          const SizedBox(height: 20), 
-        ],
+        ),
       ),
     );
   }
@@ -198,7 +203,7 @@ class _ExpenseFilterModalState extends State<ExpenseFilterModal> {
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      side: BorderSide.none, // Removes default border
+      side: BorderSide.none, 
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     );
   }

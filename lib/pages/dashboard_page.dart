@@ -167,7 +167,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         manualCapital: manualCapital,
                         userName: userName,
                         lowStockItems: lowStockItems,
-                        allExpenses: allExpensesList, // 🔥 NEW: Passing all expenses for price lookup
+                        allExpenses: allExpensesList, //Passing all expenses for price lookup
                         totalIncome: totalIncome,
                         totalExpenses: totalExpenses,
                         pendingIncome: pendingIncome,

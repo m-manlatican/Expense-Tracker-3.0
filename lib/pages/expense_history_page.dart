@@ -150,7 +150,7 @@ class _HistoryCard extends StatelessWidget {
               // Hard Delete
               TextButton.icon(
                 icon: const Icon(Icons.delete_forever, size: 18, color: AppColors.expense),
-                label: const Text("Delete Forever", style: TextStyle(color: AppColors.expense)),
+                label: const Text("Permanently Delete", style: TextStyle(color: AppColors.expense)),
                 onPressed: () async {
                   final confirm = await showDialog<bool>(
                     context: context,
